@@ -1,0 +1,37 @@
+[package]
+name = "mt-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Kitbox processing core: size-targeting solver, image and PDF engines. No platform dependencies."
+
+[dependencies]
+anyhow.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+blake3.workspace = true
+rayon.workspace = true
+image.workspace = true
+oxipng.workspace = true
+lopdf = "0.47"
+rand = "0.9"
+ab_glyph = "0.2"
+# Pure Rust, so mt-core keeps its no-platform-dependencies rule and the
+# Android port can reuse it. The published models are ONNX.
+ocrs = { version = "0.14", default-features = false, features = ["onnx"] }
+rten = "0.28"
+rten-imageproc = "0.28"
+rten-tensor = "0.28"
+
+[features]
+testkit = []
+
+# Only buildable with the fixtures it exists to write out.
+[[example]]
+name = "form_fixture"
+required-features = ["testkit"]
+
+[dev-dependencies]
+tempfile = "3"

@@ -1,0 +1,11 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Kitbox shows its own window, reveals a saved file in Explorer, and asks for a folder to watch. All processing is in-process; nothing here grants the page access to files.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "opener:allow-reveal-item-in-dir",
+    "dialog:allow-open"
+  ]
+}

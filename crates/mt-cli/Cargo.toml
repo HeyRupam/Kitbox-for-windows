@@ -1,0 +1,19 @@
+[package]
+name = "mt-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Kitbox command line: the engines without the window."
+
+[[bin]]
+name = "kitbox"
+path = "src/main.rs"
+
+[dependencies]
+mt-core.workspace = true
+mt-store.workspace = true
+anyhow.workspace = true
+serde_json.workspace = true
+image.workspace = true
+clap = { version = "4", features = ["derive"] }

@@ -1,0 +1,197 @@
+[
+  {
+    "id": "ibps-photo",
+    "name": "IBPS / bank exam photo",
+    "group": "Banking",
+    "kind": "image",
+    "target": { "kind": "range", "value": { "min": 20000, "max": 50000 } },
+    "format": "jpeg",
+    "dimensions": { "width": 200, "height": 230, "fit": "exact" }
+  },
+  {
+    "id": "ibps-signature",
+    "name": "IBPS / bank exam signature",
+    "group": "Banking",
+    "kind": "image",
+    "target": { "kind": "range", "value": { "min": 10000, "max": 20000 } },
+    "format": "jpeg",
+    "dimensions": { "width": 140, "height": 60, "fit": "exact" }
+  },
+  {
+    "id": "ssc-photo",
+    "name": "SSC photograph",
+    "group": "Exams",
+    "kind": "image",
+    "target": { "kind": "range", "value": { "min": 20000, "max": 50000 } },
+    "format": "jpeg",
+    "note": "SSC states a size range but not fixed pixels; a 3.5 × 4.5 cm ratio is the usual advice."
+  },
+  {
+    "id": "ssc-signature",
+    "name": "SSC signature",
+    "group": "Exams",
+    "kind": "image",
+    "target": { "kind": "range", "value": { "min": 10000, "max": 20000 } },
+    "format": "jpeg"
+  },
+  {
+    "id": "upsc-photo",
+    "name": "UPSC photograph",
+    "group": "Exams",
+    "kind": "image",
+    "target": { "kind": "range", "value": { "min": 20000, "max": 300000 } },
+    "format": "jpeg",
+    "dimensions": { "width": 350, "height": 350, "fit": "at_least" },
+    "note": "UPSC asks for at least 350 × 350 px, so the pixel size here is a floor, not a fixed size."
+  },
+  {
+    "id": "neet-photo",
+    "name": "NEET photograph",
+    "group": "Exams",
+    "kind": "image",
+    "target": { "kind": "range", "value": { "min": 10000, "max": 200000 } },
+    "format": "jpeg"
+  },
+  {
+    "id": "neet-signature",
+    "name": "NEET signature",
+    "group": "Exams",
+    "kind": "image",
+    "target": { "kind": "range", "value": { "min": 4000, "max": 30000 } },
+    "format": "jpeg"
+  },
+  {
+    "id": "pan-photo",
+    "name": "PAN application photo",
+    "group": "Identity",
+    "kind": "image",
+    "target": { "kind": "at_most", "value": 50000 },
+    "format": "jpeg",
+    "dimensions": { "width": 213, "height": 213, "fit": "exact" }
+  },
+  {
+    "id": "passport-in",
+    "name": "Passport photo (India, 51 × 51 mm)",
+    "group": "Identity",
+    "kind": "image",
+    "target": { "kind": "at_most", "value": 300000 },
+    "format": "jpeg",
+    "dimensions": { "width": 602, "height": 602, "fit": "exact" },
+    "dpi": 300,
+    "note": "602 px square is 51 mm at 300 DPI."
+  },
+  {
+    "id": "passport-us",
+    "name": "Passport photo (US, 2 × 2 in)",
+    "group": "Identity",
+    "kind": "image",
+    "target": { "kind": "at_most", "value": 240000 },
+    "format": "jpeg",
+    "dimensions": { "width": 600, "height": 600, "fit": "exact" },
+    "dpi": 300
+  },
+  {
+    "id": "id-photo-35x45",
+    "name": "ID photo (35 × 45 mm)",
+    "group": "Identity",
+    "kind": "image",
+    "target": { "kind": "at_most", "value": 500000 },
+    "format": "jpeg",
+    "dimensions": { "width": 413, "height": 531, "fit": "exact" },
+    "dpi": 300,
+    "note": "The common visa and ID size outside the US: 35 × 45 mm, which is 413 × 531 px at 300 DPI."
+  },
+  {
+    "id": "photo-100kb",
+    "name": "Photo under 100 KB",
+    "group": "Anything",
+    "kind": "image",
+    "target": { "kind": "at_most", "value": 100000 },
+    "format": "jpeg",
+    "note": "A plain size limit, for a form that states one and nothing else."
+  },
+  {
+    "id": "photo-20-50kb",
+    "name": "Photo 20–50 KB",
+    "group": "Anything",
+    "kind": "image",
+    "target": { "kind": "range", "value": { "min": 20000, "max": 50000 } },
+    "format": "jpeg",
+    "note": "The most common range on Indian application portals, without the pixel size any one of them adds."
+  },
+  {
+    "id": "signature-50kb",
+    "name": "Signature under 50 KB",
+    "group": "Anything",
+    "kind": "image",
+    "target": { "kind": "at_most", "value": 50000 },
+    "format": "jpeg"
+  },
+  {
+    "id": "scan-300dpi",
+    "name": "Scan at 300 DPI, under 2 MB",
+    "group": "Anything",
+    "kind": "image",
+    "target": { "kind": "at_most", "value": 2000000 },
+    "format": "jpeg",
+    "dpi": 300,
+    "note": "For a form that asks for a scan rather than a photo. The resolution is written into the file; the pixels are left alone."
+  },
+  {
+    "id": "doc-100kb",
+    "name": "Document under 100 KB",
+    "group": "Documents",
+    "kind": "pdf",
+    "target": { "kind": "at_most", "value": 100000 },
+    "format": "pdf"
+  },
+  {
+    "id": "doc-50-100",
+    "name": "Document 50–100 KB",
+    "group": "Documents",
+    "kind": "pdf",
+    "target": { "kind": "range", "value": { "min": 50000, "max": 100000 } },
+    "format": "pdf"
+  },
+  {
+    "id": "doc-300kb",
+    "name": "Document under 300 KB",
+    "group": "Documents",
+    "kind": "pdf",
+    "target": { "kind": "at_most", "value": 300000 },
+    "format": "pdf"
+  },
+  {
+    "id": "doc-500kb",
+    "name": "Document under 500 KB",
+    "group": "Documents",
+    "kind": "pdf",
+    "target": { "kind": "at_most", "value": 500000 },
+    "format": "pdf"
+  },
+  {
+    "id": "doc-1mb",
+    "name": "Document under 1 MB",
+    "group": "Documents",
+    "kind": "pdf",
+    "target": { "kind": "at_most", "value": 1000000 },
+    "format": "pdf"
+  },
+  {
+    "id": "doc-2mb",
+    "name": "Document under 2 MB",
+    "group": "Documents",
+    "kind": "pdf",
+    "target": { "kind": "at_most", "value": 2000000 },
+    "format": "pdf"
+  },
+  {
+    "id": "doc-5mb",
+    "name": "Document under 5 MB",
+    "group": "Documents",
+    "kind": "pdf",
+    "target": { "kind": "at_most", "value": 5000000 },
+    "format": "pdf",
+    "note": "The usual ceiling for an attachment or an upload that isn't a photograph."
+  }
+]

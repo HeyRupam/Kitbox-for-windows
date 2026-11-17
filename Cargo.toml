@@ -1,0 +1,30 @@
+[workspace]
+resolver = "2"
+members = ["crates/mt-core", "crates/mt-store", "crates/mt-cli", "apps/desktop/src-tauri"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+rust-version = "1.85"
+
+[workspace.dependencies]
+mt-core = { path = "crates/mt-core" }
+mt-store = { path = "crates/mt-store" }
+
+anyhow = "1"
+thiserror = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+blake3 = "1"
+rayon = "1"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "gif", "bmp", "tiff", "webp"] }
+oxipng = { version = "9", default-features = false, features = ["parallel"] }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+
+[profile.dev.package."*"]
+opt-level = 2

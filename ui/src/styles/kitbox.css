@@ -1,0 +1,350 @@
+/*
+ * Kitbox design system.
+ *
+ * Extracted from design/"Multitool Image App — Neumorphic UI.html" rather than
+ * reinterpreted: the three shadow utilities, the colour values and the radii are
+ * the ones in the reference screens. Anything added here (PDF tiles, the result
+ * card, the gallery) is built from the same pieces.
+ *
+ * Neumorphism signals state with shadow direction, which is close to invisible
+ * to anyone with low vision and disappears entirely at high contrast. So every
+ * active control here also carries the accent colour and a real ARIA state —
+ * shadow is never the only thing saying "this one is selected".
+ */
+
+:root {
+  --surface: #e6e9ef;
+  --shadow-dark: #c3c8d2;
+  --shadow-light: #ffffff;
+  --shadow-dark-hover: #bcc2cd;
+  --shadow-dark-thumb: #b8bec9;
+
+  --text: #2a2f3a;
+  --text-muted: #3e4452;
+  --text-subtle: #5b6270;
+
+  /* Overridden at runtime from settings; these four are the design's options. */
+  --accent: #c2410c;
+  --accent-ink: #ffffff;
+
+  --r-panel: 28px;
+  --r-tile: 22px;
+  --r-control: 18px;
+  --r-button: 14px;
+  --r-pill: 999px;
+
+  --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+
+  color-scheme: light;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+a {
+  color: var(--text);
+  text-decoration: none;
+}
+a:hover {
+  color: #000;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  color: var(--text-subtle);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+}
+
+input::placeholder {
+  color: var(--text-subtle);
+}
+
+/* ---- the three shadow utilities everything is built from ---- */
+
+.raised {
+  background: var(--surface);
+  box-shadow: 8px 8px 16px var(--shadow-dark), -8px -8px 16px var(--shadow-light);
+}
+
+.raised-sm {
+  background: var(--surface);
+  box-shadow: 4px 4px 8px var(--shadow-dark), -4px -4px 8px var(--shadow-light);
+}
+
+.pressed {
+  background: var(--surface);
+  box-shadow: inset 5px 5px 10px var(--shadow-dark), inset -5px -5px 10px var(--shadow-light);
+}
+
+.tile {
+  transition: box-shadow 0.18s ease, transform 0.18s ease;
+}
+.tile:hover {
+  box-shadow: 12px 12px 22px var(--shadow-dark-hover), -10px -10px 20px var(--shadow-light);
+  transform: translateY(-2px);
+}
+.tile:active {
+  box-shadow: inset 5px 5px 10px var(--shadow-dark), inset -5px -5px 10px var(--shadow-light);
+  transform: none;
+}
+
+.divider {
+  height: 2px;
+  border-radius: 2px;
+  box-shadow: inset 1px 1px 2px var(--shadow-dark), inset -1px -1px 2px var(--shadow-light);
+}
+
+/* ---- typography ---- */
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.section-heading {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.muted {
+  color: var(--text-subtle);
+}
+
+/* ---- controls ---- */
+
+.btn {
+  border-radius: var(--r-button);
+  min-height: 46px;
+  padding: 0 20px;
+  font-weight: 600;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-primary {
+  color: var(--accent-ink);
+  background: var(--accent);
+  box-shadow: 6px 6px 14px var(--shadow-dark), -6px -6px 14px var(--shadow-light);
+}
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.07);
+}
+.btn-primary:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.btn-primary:disabled {
+  background: var(--shadow-dark);
+  color: var(--text-subtle);
+  box-shadow: none;
+}
+
+.icon-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-button);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+/* Segmented control: a pressed trough holding raised buttons. */
+.segmented {
+  border-radius: var(--r-control);
+  padding: 6px;
+  display: grid;
+  gap: 6px;
+}
+.segmented > button {
+  border-radius: 13px;
+  min-height: 44px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  padding: 0 10px;
+}
+.segmented > button[aria-pressed="true"] {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.pill {
+  border-radius: var(--r-pill);
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pill[aria-pressed="true"] {
+  color: var(--accent);
+}
+
+.field {
+  border-radius: var(--r-button);
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+}
+.field input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: var(--text);
+  outline: none;
+}
+.field input[type="number"]::-webkit-outer-spin-button,
+.field input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.field input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+  text-align: center;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 14px;
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+  margin: 0;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 4px 4px 8px var(--shadow-dark-thumb), -4px -4px 8px var(--shadow-light);
+  border: 0;
+  cursor: pointer;
+}
+
+/* Toggle switch, as drawn in the compress screen. */
+.switch {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 30px;
+  border-radius: var(--r-pill);
+  position: relative;
+  display: block;
+}
+.switch > span {
+  position: absolute;
+  top: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  box-shadow: 2px 2px 5px var(--shadow-dark-thumb), -2px -2px 5px var(--shadow-light);
+  transition: left 0.18s ease, background 0.18s ease;
+}
+
+/* ---- layout helpers ---- */
+
+.col {
+  display: flex;
+  flex-direction: column;
+}
+.row {
+  display: flex;
+  align-items: center;
+}
+.grow {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--shadow-dark) transparent;
+}
+.scroll::-webkit-scrollbar {
+  width: 10px;
+}
+.scroll::-webkit-scrollbar-thumb {
+  background: var(--shadow-dark);
+  border-radius: var(--r-pill);
+  border: 3px solid var(--surface);
+}
+.noscroll {
+  scrollbar-width: none;
+}
+.noscroll::-webkit-scrollbar {
+  display: none;
+}
+
+.truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

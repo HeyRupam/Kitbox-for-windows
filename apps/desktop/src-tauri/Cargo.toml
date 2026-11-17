@@ -1,0 +1,63 @@
+[package]
+name = "kitbox-desktop"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Kitbox for Windows"
+
+[lib]
+name = "kitbox_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+serde.workspace = true
+serde_json.workspace = true
+image.workspace = true
+mt-core.workspace = true
+mt-store.workspace = true
+base64 = "0.22"
+ureq = { version = "3", default-features = false, features = ["rustls"] }
+tempfile = "3"
+tauri-plugin-single-instance = "2.4.5"
+tauri-plugin-global-shortcut = "2.3.2"
+tauri-plugin-notification = "2.4.0"
+notify = "8.2.1"
+tauri-plugin-dialog = "2.7.3"
+
+# Windows-only: printing a page to PDF goes through WebView2's own
+# PrintToPdf, which means talking COM. Pinned to the versions wry already
+# pulls in, so there is one set of interface types rather than two that look
+# identical and don't interoperate.
+[target.'cfg(windows)'.dependencies]
+clipboard-win = "5.4.3"
+webview2-com = "0.39.1"
+windows = { version = "0.62.2", features = [
+  "Win32_Foundation",
+  "Win32_System_Com",
+  "Win32_UI_Shell",
+] }
+winreg = "0.56.0"
+
+[features]
+# Tauri decides where the window loads from by this feature: without it the
+# app is a "dev" build and points at the dev server, with it the frontend is
+# embedded in the binary. It is on by default so an ordinary `cargo build`
+# produces an app that actually works on its own — the opposite default means
+# every release build silently opens a connection-refused page.
+#
+# `npm run app` runs `tauri dev --no-default-features`, which turns it back off
+# so hot reload works.
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+
+[dev-dependencies]
+lopdf = "0.47"
+# The synthetic documents and photos the replay tests run on.
+mt-core = { workspace = true, features = ["testkit"] }
+tempfile = "3.27.0"

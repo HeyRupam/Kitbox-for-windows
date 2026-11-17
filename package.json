@@ -1,0 +1,16 @@
+{
+  "name": "kitbox",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Offline PDF and image toolkit for Windows",
+  "scripts": {
+    "dev": "npm --prefix ui run dev",
+    "ui:build": "npm --prefix ui run build",
+    "app": "cd apps/desktop && tauri dev --no-default-features",
+    "app:build": "cd apps/desktop && tauri build",
+    "test": "cargo test && npm --prefix ui run typecheck"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}
