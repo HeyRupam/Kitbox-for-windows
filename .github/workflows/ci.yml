@@ -1,0 +1,83 @@
+# What has to be true before anything is merged.
+#
+# There is no remote yet, so nothing here runs today. It is in the repository
+# because the moment one exists, the checks that matter should already be
+# written down rather than remembered.
+#
+# Windows only, deliberately: the desktop shell talks to WebView2 and the
+# Windows registry, and the engine is the part that is portable.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # The long sweep, overnight, so a slow regression in the solver is found by
+  # a machine rather than by someone wondering why their form was rejected.
+  schedule:
+    - cron: "0 3 * * *"
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  engine:
+    name: Engine and shell
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Formatting
+        run: cargo fmt --all -- --check
+
+      - name: Lints
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      # Release, not debug: the image and PDF work is slow enough unoptimised
+      # that the suite stops being something anyone waits for.
+      - name: Tests
+        run: cargo test --workspace --release
+
+  interface:
+    name: Interface
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install
+        run: npm ci --prefix ui
+
+      - name: Types
+        run: npm --prefix ui run typecheck
+
+      - name: Build
+        run: npm --prefix ui run build
+
+  solver:
+    name: The full solver sweep
+    # Three and a half minutes of real encodes: worth doing on main and
+    # overnight, not on every push to a branch.
+    if: github.event_name == 'schedule' || github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Two hundred (file, target) pairs
+        run: >
+          cargo test -p mt-core --release --test solver_invariant
+          -- --ignored --nocapture

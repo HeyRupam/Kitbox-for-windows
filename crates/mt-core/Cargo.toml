@@ -35,3 +35,7 @@ required-features = ["testkit"]
 
 [dev-dependencies]
 tempfile = "3"
+# The crate depends on itself with the fixtures turned on, so `cargo test`
+# builds the integration tests without anyone having to remember a flag, and
+# so they can never be quietly skipped for want of one.
+mt-core = { path = ".", features = ["testkit"] }

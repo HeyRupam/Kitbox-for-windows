@@ -2726,6 +2726,7 @@ dependencies = [
  "blake3",
  "image",
  "lopdf",
+ "mt-core",
  "ocrs",
  "oxipng",
  "rand 0.9.5",
