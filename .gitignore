@@ -1,6 +1,11 @@
-target/
+# Anchored to the repository root, every one of them. An unanchored `target/`
+# matches any directory of that name at any depth - including
+# crates/mt-core/src/target, which is the size-targeting solver and the heart
+# of this program. It was silently left out of the first commit.
+/target/
+/ui/dist/
+/apps/desktop/src-tauri/target/
 node_modules/
-dist/
 *.log
 fixtures/*.bmp
 
