@@ -49,6 +49,10 @@ pub struct ImageKnob {
 }
 
 pub struct ImageCompressor {
+    /// The file exactly as it arrived, when handing it back would be a
+    /// complete answer — already stripped of metadata if that was asked for,
+    /// which costs no quality because it only drops whole blocks.
+    deliverable: Option<Vec<u8>>,
     source: DynamicImage,
     /// Source after `max_dimension` / `exact_dimensions` are applied. All scale
     /// percentages are relative to this.
@@ -77,7 +81,29 @@ impl ImageCompressor {
 
         let working = constrain(&source, &opts);
 
-        Ok(ImageCompressor { source, working, output, opts, resized: Mutex::new(HashMap::new()) })
+        // Handing the original back is only an answer when nothing else was
+        // asked for: no new format, no fixed size, and no cap it exceeds.
+        let untouched_is_an_answer = output == kind
+            && opts.exact_dimensions.is_none()
+            && opts
+                .max_dimension
+                .is_none_or(|cap| cap == 0 || source.width().max(source.height()) <= cap);
+        let deliverable = untouched_is_an_answer.then(|| {
+            if opts.strip_metadata {
+                super::strip::without_metadata(bytes).unwrap_or_else(|| bytes.to_vec())
+            } else {
+                bytes.to_vec()
+            }
+        });
+
+        Ok(ImageCompressor {
+            deliverable,
+            source,
+            working,
+            output,
+            opts,
+            resized: Mutex::new(HashMap::new()),
+        })
     }
 
     pub fn output_kind(&self) -> FileKind {
@@ -166,6 +192,10 @@ impl Encodable for ImageCompressor {
         } else {
             format!("quality {}, {size}", knob.quality)
         }
+    }
+
+    fn untouched(&self) -> Option<&[u8]> {
+        self.deliverable.as_deref()
     }
 
     fn score(&self, encoded: &[u8]) -> Option<f32> {
@@ -304,12 +334,19 @@ mod tests {
 
     #[test]
     fn returns_the_untouched_file_when_it_already_fits() {
+        // This test is older than the behaviour it describes: it was named for
+        // what should happen and asserted what did, which was one encode at
+        // the top of the ladder — and that encode can come out *larger* than
+        // the file already is. The corpus benchmark put a number on it (37 KB
+        // asked for under 100 KB, answered with 68 KB) and the name was right
+        // all along.
         let src = testkit::encode_jpeg(&testkit::photo(200, 200), 80);
         let target = SizeTarget::AtMost(10_000_000);
         let out =
             compress_to_target(&src, target, Bias::Balanced, CompressOptions::default()).unwrap();
         let s = out.solved().unwrap();
-        assert_eq!(s.probes, 1);
+        assert_eq!(s.probes, 0, "nothing should have been encoded");
+        assert_eq!(s.size, src.len() as u64, "it should be the file that came in");
         assert!(s.score.unwrap_or(0.0) > 0.95);
     }
 
@@ -396,5 +433,65 @@ mod tests {
 
         let c = ImageCompressor::new(&src, CompressOptions::default()).unwrap();
         assert_eq!(c.output_kind(), FileKind::Png);
+    }
+
+    #[test]
+    fn already_fitting_still_means_stripped_when_that_was_asked_for() {
+        // Handing the file back must not quietly hand the GPS back with it.
+        let photo = testkit::encode_jpeg(&testkit::photo(400, 300), 85);
+        let outcome = compress_to_target(
+            &photo,
+            SizeTarget::AtMost(photo.len() as u64 * 3),
+            Bias::Balanced,
+            CompressOptions { strip_metadata: true, ..Default::default() },
+        )
+        .unwrap();
+        let solved = outcome.solved().expect("a hit");
+        assert_eq!(solved.probes, 0);
+        // Same pixels either way.
+        let before = ::image::load_from_memory(&photo).unwrap().into_rgb8();
+        let after = ::image::load_from_memory(&solved.bytes).unwrap().into_rgb8();
+        assert_eq!(before.as_raw(), after.as_raw());
+    }
+
+    #[test]
+    fn a_file_that_fits_but_was_asked_to_change_is_still_worked_on() {
+        // "Already small enough" is not an answer when the request was also
+        // "and make it a PNG", or "and make it exactly 200×230".
+        let photo = testkit::encode_jpeg(&testkit::photo(400, 300), 85);
+        let outcome = compress_to_target(
+            &photo,
+            SizeTarget::AtMost(photo.len() as u64 * 5),
+            Bias::Balanced,
+            CompressOptions {
+                format: OutputFormat::Png,
+                strip_metadata: true,
+                max_dimension: None,
+                exact_dimensions: None,
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            FileKind::sniff(outcome.bytes()),
+            FileKind::Png,
+            "the format it was asked for wins over leaving it alone"
+        );
+
+        let exact = compress_to_target(
+            &photo,
+            SizeTarget::AtMost(photo.len() as u64 * 5),
+            Bias::Balanced,
+            CompressOptions {
+                format: OutputFormat::Keep,
+                strip_metadata: true,
+                max_dimension: None,
+                exact_dimensions: Some((200, 230)),
+            },
+        )
+        .unwrap();
+        let (w, h) = ::image::load_from_memory(exact.bytes())
+            .map(|i| (i.width(), i.height()))
+            .unwrap();
+        assert_eq!((w, h), (200, 230));
     }
 }

@@ -508,6 +508,64 @@ A four-step chain built entirely on the command line — compress, resize, make 
 PDF, number the pages — now shows up in the gallery as one story, including the
 step that began with several files and so has nothing before it.
 
+## Proving the promise
+
+The app rests on one claim: you state the size and the file lands inside it.
+Everything else — the forms, the recipes, the right-click menu — ends in the
+same solver, so that is the thing to test hardest.
+
+**Two hundred pairs nobody chose.** A seeded generator makes files (crops,
+phone photos, scans) and targets (plausible, awkward, and a few nothing could
+ever reach), and checks the invariant every time:
+
+> a `Hit` inside the range, a `Padded` inside the range, or an `Infeasible`
+> that says so — never a success that is outside what was asked for.
+
+The last run: 139 hit, 49 padded into range, 12 honestly refused, none wrong.
+Each failure would print the seed that produced it, so a bad pair can be
+reproduced exactly rather than hunted. The full sweep takes about three and a
+half minutes and is `#[ignore]`d; a 24-pair version runs with the suite.
+
+**A benchmark, separately.** The sweep proves the solver doesn't lie; the
+corpus says how good it is — hit rate, encodes spent, how much of the picture
+survives, and how long it takes, per kind of file:
+
+```
+cargo test -p mt-core --release --test corpus -- --ignored --nocapture
+```
+
+Its corpus is synthetic, and the output says so. The plan asks for fifty real
+PDFs and photographs, which would be better — real cameras and scanners have
+quirks no generator invents. Until there is a corpus that can live in the
+repository without someone's documents in it, this is what there is, and it
+catches a regression.
+
+### What the benchmark found on its first run
+
+A 37 KB crop, asked to come in **under 100 KB**, came back as 68 KB. It already
+fitted, and the top of the quality ladder re-encoded it into something larger —
+the one way a compressor can genuinely insult you.
+
+There was even a test called `returns_the_untouched_file_when_it_already_fits`.
+It asserted one encode, which is what the code did; the name said what it
+should do. Nobody had noticed the two disagreeing.
+
+A file that already meets its target now comes back **byte for byte**, with no
+encode at all. Where metadata is being stripped it still is — JPEG and PNG both
+keep that in whole blocks that can be dropped without touching a pixel, so the
+file gets smaller and the picture is identical. "Already small enough" stops
+being an answer the moment the request means more than a size: a different
+format, or fixed dimensions, and it works as before.
+
+On the corpus that turned three re-encodes into untouched files and took the
+average from 4.3 encodes to 3.8.
+
+**CI is written down even though nothing runs it.** There is no remote yet, so
+`.github/workflows/ci.yml` does nothing today. It is in the repository because
+the checks that matter should be written before they are needed: formatting,
+clippy with warnings denied, the suite on Windows, the interface's types and
+build, and the full solver sweep on main and overnight.
+
 ## Forgetting
 
 History keeps a copy of every file that goes in and comes out, which is what

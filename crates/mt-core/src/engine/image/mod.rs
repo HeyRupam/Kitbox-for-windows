@@ -7,6 +7,7 @@ pub mod faces;
 pub mod meme;
 pub mod encode;
 pub mod scan;
+pub mod strip;
 pub mod signature;
 pub mod transform;
 pub mod upscale;
