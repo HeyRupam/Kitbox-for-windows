@@ -173,5 +173,8 @@ fn how_well_the_solver_does() {
         rows.len()
     );
     assert!(probes < 14.0, "{probes:.1} encodes per file on average is too many");
-    assert!(slowest < 30_000, "the slowest case took {slowest} ms");
+    // Was 11 seconds before the solver stopped measuring every attempt it
+    // throws away, and is about 3 now. Loose enough for a slower machine,
+    // tight enough to notice that coming back.
+    assert!(slowest < 15_000, "the slowest case took {slowest} ms");
 }

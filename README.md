@@ -573,6 +573,34 @@ quirks no generator invents. Until there is a corpus that can live in the
 repository without someone's documents in it, this is what there is, and it
 catches a regression.
 
+### And on its second: a scan took eleven seconds
+
+The benchmark's slowest case was a one-page scan to 100 KB: **eleven seconds,
+ten encodes**, against seven milliseconds for a photograph. Measured rather
+than guessed at, with a stopwatch inside one encode:
+
+```
+images  147 ms | ssim  337 ms | clone 0 ms | apply 0 ms | save 0 ms
+```
+
+Two thirds of every probe was the similarity score — and the solver throws
+nine of ten probes away. It was measuring attempts nobody would ever see, to
+produce one number at the end.
+
+The score is now worked out when it is asked for, from the finished document,
+once. Same answers, same bytes, same quality figures:
+
+| | before | after |
+|---|---|---|
+| slowest case | 10,981 ms | **3,156 ms** |
+| whole corpus | 65,063 ms | **22,514 ms** |
+| one probe | ~400 ms | ~115 ms |
+
+A test pins the reason rather than the timing — encoding an attempt leaves the
+score cache empty, and asking for a score fills it exactly once — because a
+test that watches the clock fails on a busy machine and teaches nobody
+anything.
+
 ### What the benchmark found on its first run
 
 A 37 KB crop, asked to come in **under 100 KB**, came back as 68 KB. It already

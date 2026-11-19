@@ -221,24 +221,11 @@ impl Encodable for PdfCompressor {
             })
             .collect();
 
-        // Measure what this cost on the image that dominates the file, so the
-        // result card can say more than "it got smaller".
-        let dominant_score = self.targets.first().and_then(|info| {
-            let job = encoded.iter().find(|e| e.id == info.id)?;
-            let before = self.image_for(info.id)?;
-            let after = image::load_from_memory(&job.jpeg).ok()?;
-            Some(quality::ssim(&before, &after))
-        });
-
         let mut doc = self.baseline.clone();
         for job in encoded {
             apply_image(&mut doc, job.id, job.jpeg, job.width, job.height, knob.grayscale)?;
         }
         let out = save_compact(&mut doc)?;
-
-        if let (Some(score), Ok(mut scores)) = (dominant_score, self.scores.lock()) {
-            scores.insert(out.len(), score);
-        }
         Ok(out)
     }
 
@@ -250,11 +237,33 @@ impl Encodable for PdfCompressor {
         format!("images at {} DPI, quality {}{}", knob.dpi, knob.quality, gray)
     }
 
+    /// How much of the picture survived, measured on the image that dominates
+    /// the file.
+    ///
+    /// Done here rather than while encoding, which is the whole reason a scan
+    /// no longer takes ten seconds: the solver asks for a score once, on the
+    /// answer it chose, and this used to be computed on every attempt it threw
+    /// away — about 300 ms of each 450 ms probe, nine times for nothing.
     fn score(&self, encoded: &[u8]) -> Option<f32> {
         if encoded.len() == self.baseline_bytes.len() {
             return Some(1.0);
         }
-        self.scores.lock().ok()?.get(&encoded.len()).copied()
+        if let Some(found) = self.scores.lock().ok()?.get(&encoded.len()).copied() {
+            return Some(found);
+        }
+
+        let dominant = self.targets.first()?;
+        let before = self.image_for(dominant.id)?;
+        // The image keeps its object id through the rebuild, so it can be
+        // found again in the finished document.
+        let finished = Document::load_mem(encoded).ok()?;
+        let after = decode_image(&finished, dominant.id)?;
+
+        let score = quality::ssim(&before, &after);
+        if let Ok(mut scores) = self.scores.lock() {
+            scores.insert(encoded.len(), score);
+        }
+        Some(score)
     }
 
     fn suggestions(&self, _target: SizeTarget) -> Vec<String> {
@@ -413,6 +422,28 @@ mod tests {
             lopdf::content::Content::decode(&content).is_ok(),
             "page content should still be real operators"
         );
+    }
+
+    #[test]
+    fn encoding_an_attempt_does_not_measure_it() {
+        // The solver throws most attempts away. Measuring every one of them
+        // cost about 300 ms of each 450 ms probe — two thirds of the time a
+        // scan took — to produce nine numbers nobody ever saw.
+        let pdf = testkit::pdf_with_image(1200, 900, 540.0, 405.0, 92);
+        let compressor = PdfCompressor::new(&pdf, Default::default()).unwrap();
+        let knob = PdfKnob { lossless_only: false, dpi: 150, quality: 60, grayscale: false };
+
+        let encoded = compressor.encode(&knob).unwrap();
+        assert!(
+            compressor.scores.lock().unwrap().is_empty(),
+            "encoding should not have measured anything"
+        );
+
+        // And the measurement still happens when the answer is asked for —
+        // worked out from the finished document rather than remembered.
+        let score = compressor.score(&encoded).expect("a score when it is wanted");
+        assert!((0.0..=1.0).contains(&score));
+        assert_eq!(compressor.scores.lock().unwrap().len(), 1, "and only once");
     }
 
     #[test]
