@@ -45,6 +45,7 @@ import type {
   BatchOp,
   BatchStep,
   LoadedPresets,
+  Policy,
   Preset,
   PresetFixResult,
   PresetReport,
@@ -54,6 +55,7 @@ import type {
   ShellMenuState,
   ShellRun,
   Swept,
+  SweptByAge,
   Chain,
   Story,
   RecipeRun,
@@ -609,6 +611,30 @@ export async function runRecipe(chain: Chain, files: File[]): Promise<RecipeRun>
     })),
   );
   return invoke<RecipeRun>("run_recipe", { request: { chain, files: payload } });
+}
+
+/* ---------- letting history forget by itself ---------- */
+
+export async function retention(): Promise<Policy> {
+  if (!isDesktop()) requireDesktop("Retention");
+  return invoke<Policy>("retention", {});
+}
+
+export async function setRetention(policy: Policy): Promise<Policy> {
+  if (!isDesktop()) requireDesktop("Retention");
+  return invoke<Policy>("set_retention", { policy });
+}
+
+/** What the rule would take right now — answered even when it is off. */
+export async function retentionPreview(policy: Policy): Promise<SweptByAge> {
+  if (!isDesktop()) requireDesktop("Retention");
+  return invoke<SweptByAge>("retention_preview", { policy });
+}
+
+/** Apply it now rather than at the next start. */
+export async function runRetention(policy: Policy): Promise<SweptByAge> {
+  if (!isDesktop()) requireDesktop("Retention");
+  return invoke<SweptByAge>("run_retention", { policy });
 }
 
 /* ---------- watched folders ---------- */

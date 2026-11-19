@@ -14,8 +14,12 @@ import {
   pickFolder,
   setWatchedFolders,
   watchedFolders,
+  retention,
+  retentionPreview,
+  runRetention,
+  setRetention,
 } from "../lib/bridge";
-import type { Hotkey, Pressed, ShellMenuState, Watch } from "../lib/types";
+import type { Hotkey, Policy, Pressed, ShellMenuState, SweptByAge, Watch } from "../lib/types";
 
 /**
  * The few things worth being able to change.
@@ -31,6 +35,9 @@ export function Settings({ onBack }: { onBack: () => void }) {
   const [pressed, setPressed] = useState<Pressed | null>(null);
   const [watches, setWatches] = useState<Watch[]>([]);
   const [watchError, setWatchError] = useState<string | null>(null);
+  const [policy, setPolicy] = useState<Policy | null>(null);
+  const [wouldTake, setWouldTake] = useState<SweptByAge | null>(null);
+  const [swept, setSwept] = useState<SweptByAge | null>(null);
   const [folder, setFolder] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +47,12 @@ export function Settings({ onBack }: { onBack: () => void }) {
     shellMenu().then(setMenu).catch(() => setMenu(null));
     clipboardKey().then(setKey).catch(() => setKey(null));
     watchedFolders().then(setWatches).catch(() => setWatches([]));
+    retention()
+      .then((saved) => {
+        setPolicy(saved);
+        retentionPreview(saved).then(setWouldTake).catch(() => setWouldTake(null));
+      })
+      .catch(() => setPolicy(null));
     outputFolder()
       .then((path) => setFolder(path ?? ""))
       .catch(() => setFolder(""));
@@ -86,6 +99,21 @@ export function Settings({ onBack }: { onBack: () => void }) {
     if (!folder) return;
     if (watches.some((w) => w.path === folder)) return;
     await changeWatches([...watches, { path: folder, target: "100kb", enabled: true }]);
+  };
+
+  // Every change re-asks what it would take, so the number on screen always
+  // describes the rule as it now stands rather than as it was.
+  const changePolicy = async (patch: Partial<Policy>) => {
+    if (!policy) return;
+    const next = { ...policy, ...patch };
+    setPolicy(next);
+    setSwept(null);
+    try {
+      await setRetention(next);
+      setWouldTake(await retentionPreview(next));
+    } catch {
+      setWouldTake(null);
+    }
   };
 
   const tryNow = async () => {
@@ -350,6 +378,103 @@ export function Settings({ onBack }: { onBack: () => void }) {
 
         {watchError && (
           <span style={{ fontSize: 12, color: "var(--accent)", lineHeight: 1.6 }}>{watchError}</span>
+        )}
+      </section>
+
+      <section
+        className="raised col"
+        style={{ borderRadius: "var(--r-panel)", padding: 24, gap: 14, maxWidth: 720 }}
+      >
+        <div className="row" style={{ gap: 16, justifyContent: "space-between", flexWrap: "wrap" }}>
+          <div className="col" style={{ gap: 4, minWidth: 0 }}>
+            <span style={{ fontSize: 15, fontWeight: 600 }}>Let history forget</span>
+            <span
+              style={{ fontSize: 12.5, color: "var(--text-subtle)", lineHeight: 1.6, maxWidth: 520 }}
+            >
+              Kitbox keeps a copy of everything that goes in and comes out. This drops the old
+              ones by itself, at every start. Pinned entries are never touched — that is what
+              pinning is for.
+            </span>
+          </div>
+          <button
+            type="button"
+            className={policy?.enabled ? "pressed btn" : "raised-sm btn"}
+            aria-pressed={!!policy?.enabled}
+            disabled={!policy}
+            onClick={() => changePolicy({ enabled: !policy?.enabled })}
+            style={{
+              minHeight: 46,
+              minWidth: 128,
+              color: policy?.enabled ? "var(--accent)" : undefined,
+              fontWeight: policy?.enabled ? 700 : 500,
+            }}
+          >
+            {policy?.enabled ? "On" : "Off"}
+          </button>
+        </div>
+
+        {policy && (
+          <>
+            <Choice
+              label="Older than"
+              value={String(policy.days)}
+              options={[
+                ["30", "a month"],
+                ["90", "three months"],
+                ["365", "a year"],
+              ]}
+              onPick={(days) => changePolicy({ days: Number(days) })}
+            />
+            <Choice
+              label="Drop"
+              value={policy.scope}
+              options={[
+                ["intermediates", "the steps, not the results"],
+                ["everything", "everything that old"],
+              ]}
+              onPick={(scope) => changePolicy({ scope: scope as Policy["scope"] })}
+            />
+            <span style={{ fontSize: 11.5, color: "var(--text-subtle)", lineHeight: 1.6 }}>
+              {policy.scope === "intermediates"
+                ? "A step is a copy something else was made from — the phone photo behind the compressed one. The end of each chain stays."
+                : "Everything old enough goes, finished files included."}
+            </span>
+
+            <div className="pressed col" style={{ borderRadius: 16, padding: 14, gap: 8 }}>
+              <span style={{ fontSize: 12.5, fontWeight: 600 }}>
+                {swept
+                  ? `Forgot ${swept.forgotten}, freeing ${formatSize(swept.freed)}.`
+                  : wouldTake
+                    ? wouldTake.forgotten === 0
+                      ? "Right now this would take nothing."
+                      : `Right now this would forget ${wouldTake.forgotten} ${
+                          wouldTake.forgotten === 1 ? "copy" : "copies"
+                        }, freeing ${formatSize(wouldTake.freed)}.`
+                    : "…"}
+              </span>
+              {wouldTake && wouldTake.pinned > 0 && (
+                <span style={{ fontSize: 11.5, color: "var(--text-subtle)" }}>
+                  {wouldTake.pinned} pinned {wouldTake.pinned === 1 ? "entry is" : "entries are"} safe from it.
+                </span>
+              )}
+              <button
+                type="button"
+                className="raised-sm btn"
+                style={{ alignSelf: "flex-start", minHeight: 40 }}
+                disabled={!wouldTake || wouldTake.forgotten === 0}
+                onClick={async () => {
+                  if (!policy) return;
+                  const done = await runRetention(policy).catch(() => null);
+                  if (done) {
+                    setSwept(done);
+                    setWouldTake(await retentionPreview(policy).catch(() => null));
+                  }
+                }}
+              >
+                Do it now
+              </button>
+            </div>
+          </>
         )}
       </section>
 

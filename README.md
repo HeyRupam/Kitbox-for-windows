@@ -49,6 +49,7 @@ covered by tests.
 | **Form presets** — check a file against a form, and fix it | ✅ editable JSON on disk |
 | Local history with **lineage shown**, filters and thumbnails | ✅ every tool |
 | **Forget** — remove an entry, its copy and its thumbnail | ✅ with a tidy-up sweep |
+| **Retention** — let history drop old steps by itself | ✅ opt-in |
 | **Run a past job again** on a new file | ✅ from History |
 | Command line | ✅ every tool |
 
@@ -455,6 +456,38 @@ protection was real and unreachable — forget and tidy both honoured a flag
 nothing could set. Now it is the small badge on each history card. Forgetting a
 pinned entry on purpose still works; that is an explicit answer to an explicit
 question, and the confirmation says so.
+
+## Letting history forget by itself
+
+Kitbox keeps a copy of everything that goes in and comes out, which is what
+makes lineage work and what makes the gallery worth having. It also means it is
+holding copies of your documents, so there is a rule that drops the old ones
+without being asked. It runs at every start.
+
+Four things make it safe to leave on:
+
+* **It is off until you turn it on.** Deleting someone's files on a schedule is
+  not a default.
+* **Pinned is pinned.** The only thing in the app that overrides everything
+  else, and the panel says how many are protected.
+* **Nothing recent.** The shortest age offered is a month, and a hand-edited
+  `0` in the settings file is read as 30 — "wipe it all at the next start" is
+  one keystroke away otherwise.
+* **You see what it would take before you let it.** The panel answers *"right
+  now this would forget 12 copies, freeing 40 MB"* for the rule as it currently
+  stands, including while it is still switched off. Turning it on is a decision
+  rather than a hope.
+
+### Steps, not results
+
+The default scope is the one worth explaining. An **intermediate** is a stored
+copy that something else was made from — the phone photo behind the compressed
+one, the scan behind the signed PDF. The end of a chain is what you were
+actually making, so it stays. Switch the scope to *everything that old* and
+that distinction goes away.
+
+Tested over a real chain: a scan compressed into a smaller copy, both aged past
+the limit, leaves the scan forgotten and the compressed copy untouched.
 
 ## Where a file came from
 

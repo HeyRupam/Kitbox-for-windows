@@ -302,6 +302,19 @@ impl Store {
         Ok(rows.collect::<std::result::Result<_, _>>()?)
     }
 
+    /// Say when a stored copy really dates from.
+    ///
+    /// Two uses: a file brought in from a backup should carry its own date
+    /// rather than the date it was imported, and the retention rule — which
+    /// decides by age — can only be tested if a test can make something old.
+    pub fn set_created_at(&self, hash: &str, when_ms: i64) -> Result<()> {
+        self.db.execute(
+            "UPDATE files SET created_at = ?2 WHERE hash = ?1",
+            params![hash, when_ms],
+        )?;
+        Ok(())
+    }
+
     pub fn set_pinned(&self, hash: &str, pinned: bool) -> Result<()> {
         self.db.execute(
             "UPDATE files SET pinned = ?2 WHERE hash = ?1",

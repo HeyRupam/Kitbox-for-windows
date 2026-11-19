@@ -1060,3 +1060,20 @@ export interface Story {
   /** What has been made from it since. */
   derivatives: Telling[];
 }
+
+/* ---------- letting history forget by itself ---------- */
+
+export interface Policy {
+  enabled: boolean;
+  /** Never honoured below 30, whatever the file says. */
+  days: number;
+  /** "intermediates" keeps the end of every chain; "everything" doesn't. */
+  scope: "intermediates" | "everything";
+}
+
+export interface SweptByAge {
+  forgotten: number;
+  freed: number;
+  /** Kept because they are pinned. */
+  pinned: number;
+}

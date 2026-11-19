@@ -3393,6 +3393,55 @@ async fn entry_story(state: State<'_, AppState>, hash: String) -> Result<Story, 
     Ok(Story { file: link(&hash), chain, derivatives })
 }
 
+/// The rule history follows when nobody is watching.
+#[tauri::command]
+async fn retention(state: State<'_, AppState>) -> Result<retention::Policy, String> {
+    Ok(retention::load(&state.preset_dir))
+}
+
+/// What the rule would take right now, whether or not it is on.
+///
+/// This is what makes turning it on a decision rather than a hope: the screen
+/// can say "this would forget 12 things and free 40 MB" before anything is
+/// forgotten.
+#[tauri::command]
+async fn retention_preview(
+    state: State<'_, AppState>,
+    policy: retention::Policy,
+) -> Result<retention::Swept, String> {
+    let store = state.store.lock().map_err(|_| "history is busy")?;
+    retention::preview(&store, &policy, now_ms())
+}
+
+#[tauri::command]
+async fn set_retention(
+    state: State<'_, AppState>,
+    policy: retention::Policy,
+) -> Result<retention::Policy, String> {
+    retention::save(&state.preset_dir, &policy)?;
+    Ok(policy)
+}
+
+/// Apply the rule now, rather than waiting for the next start.
+#[tauri::command]
+async fn run_retention(
+    state: State<'_, AppState>,
+    policy: retention::Policy,
+) -> Result<retention::Swept, String> {
+    let store = state.store.lock().map_err(|_| "history is busy")?;
+    // Running it by hand means running it: a policy that is saved but not yet
+    // enabled still does what the preview just said it would.
+    let asked = retention::Policy { enabled: true, ..policy };
+    retention::run(&store, &asked, now_ms())
+}
+
+fn now_ms() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as i64)
+        .unwrap_or(0)
+}
+
 /// Where saved recipes live: one file, beside the presets, editable by hand.
 fn chains_path(dir: &Path) -> PathBuf {
     dir.join("recipes.json")
@@ -5118,6 +5167,7 @@ pub mod recipe;
 pub mod shell;
 pub mod hotkey;
 pub mod watch;
+pub mod retention;
 
 
 /// Render one page and quit, for the `--render` flag.
@@ -5266,6 +5316,29 @@ pub fn run() {
                 preset_dir,
             });
 
+            // The retention rule, if there is one. Before anything else can
+            // add to history, so a run is never racing a job.
+            {
+                let policy = retention::load(&preset_dir_for_hotkey);
+                if policy.enabled {
+                    let store = app.state::<AppState>();
+                    let store = store.store.lock();
+                    match store {
+                        Ok(store) => match retention::run(&store, &policy, now_ms()) {
+                            Ok(swept) if swept.forgotten > 0 => println!(
+                                "retention: forgot {} old {}, freeing {}",
+                                swept.forgotten,
+                                if swept.forgotten == 1 { "copy" } else { "copies" },
+                                format_size(swept.freed)
+                            ),
+                            Ok(_) => {}
+                            Err(e) => eprintln!("retention: {e}"),
+                        },
+                        Err(_) => eprintln!("retention: history was busy at start"),
+                    }
+                }
+            }
+
             // An installed menu names an exe; if this is a different copy of
             // Kitbox, the menu should run this one rather than whatever path
             // it was set up with.
@@ -5335,6 +5408,10 @@ pub fn run() {
             forget_entry,
             set_pinned,
             entry_story,
+            retention,
+            retention_preview,
+            set_retention,
+            run_retention,
             recipes,
             save_recipe,
             delete_recipe,
