@@ -7,7 +7,6 @@ rust-version.workspace = true
 description = "Kitbox processing core: size-targeting solver, image and PDF engines. No platform dependencies."
 
 [dependencies]
-anyhow.workspace = true
 thiserror.workspace = true
 serde.workspace = true
 serde_json.workspace = true

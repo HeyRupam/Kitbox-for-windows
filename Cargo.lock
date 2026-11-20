@@ -2722,7 +2722,6 @@ name = "mt-core"
 version = "0.1.0"
 dependencies = [
  "ab_glyph",
- "anyhow",
  "blake3",
  "image",
  "lopdf",

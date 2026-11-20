@@ -1,9 +1,5 @@
 # What has to be true before anything is merged.
 #
-# There is no remote yet, so nothing here runs today. It is in the repository
-# because the moment one exists, the checks that matter should already be
-# written down rather than remembered.
-#
 # Windows only, deliberately: the desktop shell talks to WebView2 and the
 # Windows registry, and the engine is the part that is portable.
 
@@ -33,6 +29,17 @@ jobs:
           components: rustfmt, clippy
 
       - uses: Swatinem/rust-cache@v2
+
+      # `tauri::generate_context!` reads the frontend at compile time and
+      # refuses to expand if the directory is missing, so the shell cannot be
+      # type-checked at all without one. A built interface is not what this job
+      # is checking — the Interface job does that — so an empty page is enough,
+      # and is quicker than installing Node here to produce one properly.
+      - name: A frontend for the macro to find
+        run: |
+          New-Item -ItemType Directory -Force ui/dist | Out-Null
+          Set-Content ui/dist/index.html '<!doctype html><title>placeholder</title>' -Encoding utf8
+        shell: pwsh
 
       - name: Formatting
         run: cargo fmt --all -- --check
