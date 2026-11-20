@@ -50,17 +50,13 @@ impl Model {
 /// What goes behind the subject once the background is gone.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "value", rename_all = "snake_case")]
+#[derive(Default)]
 pub enum Backdrop {
     /// Nothing — a PNG with real transparency.
+    #[default]
     Transparent,
     /// A flat colour, which is what forms ask for.
     Colour([u8; 3]),
-}
-
-impl Default for Backdrop {
-    fn default() -> Self {
-        Backdrop::Transparent
-    }
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -146,11 +142,8 @@ pub fn cut(
     );
     // Feather after scaling up, so the blur is in the picture's own pixels
     // rather than the model's 320.
-    let mask = if options.feather > 0 {
-        super::scan::box_blur(&mask, options.feather)
-    } else {
-        mask
-    };
+    let mask =
+        if options.feather > 0 { super::scan::box_blur(&mask, options.feather) } else { mask };
 
     Ok(composite(source, &mask, options))
 }
@@ -186,9 +179,7 @@ fn composite(
             }
             let px = rgb.get_pixel(x, y).0;
             let pixel = match options.backdrop {
-                Backdrop::Transparent => {
-                    Rgba([px[0], px[1], px[2], (alpha * 255.0).round() as u8])
-                }
+                Backdrop::Transparent => Rgba([px[0], px[1], px[2], (alpha * 255.0).round() as u8]),
                 Backdrop::Colour(back) => {
                     // Mixed here rather than left to whoever saves it: a JPEG
                     // has no alpha, and flattening onto white by default would
@@ -196,12 +187,7 @@ fn composite(
                     let mix = |fore: u8, back: u8| {
                         (fore as f32 * alpha + back as f32 * (1.0 - alpha)).round() as u8
                     };
-                    Rgba([
-                        mix(px[0], back[0]),
-                        mix(px[1], back[1]),
-                        mix(px[2], back[2]),
-                        255,
-                    ])
+                    Rgba([mix(px[0], back[0]), mix(px[1], back[1]), mix(px[2], back[2]), 255])
                 }
             };
             out.put_pixel(x, y, pixel);
@@ -224,13 +210,8 @@ fn composite(
         );
     }
 
-    let report = CutoutReport {
-        width: w,
-        height: h,
-        coverage,
-        note: A_GUESS.to_string(),
-        warnings,
-    };
+    let report =
+        CutoutReport { width: w, height: h, coverage, note: A_GUESS.to_string(), warnings };
     (DynamicImage::ImageRgba8(out), report)
 }
 
@@ -243,11 +224,8 @@ fn saliency(source: &DynamicImage, model: &Model) -> Result<GrayImage> {
     // Scaled to the picture's own brightest channel before standardising,
     // which is how these weights were trained — skip it and a dim photo reads
     // as a dim subject.
-    let peak = rgb
-        .pixels()
-        .map(|p| p.0.iter().copied().max().unwrap_or(0))
-        .max()
-        .unwrap_or(255) as f32
+    let peak = rgb.pixels().map(|p| p.0.iter().copied().max().unwrap_or(0)).max().unwrap_or(255)
+        as f32
         / 255.0;
     let peak = peak.max(1e-6);
 
@@ -266,9 +244,8 @@ fn saliency(source: &DynamicImage, model: &Model) -> Result<GrayImage> {
         .inner
         .run_one(input.view().into(), None)
         .map_err(|e| Error::other(format!("the model couldn't be run: {e}")))?;
-    let map: NdTensor<f32, 4> = output
-        .try_into()
-        .map_err(|_| Error::other("the model returned something unexpected"))?;
+    let map: NdTensor<f32, 4> =
+        output.try_into().map_err(|_| Error::other("the model returned something unexpected"))?;
     if map.shape()[2] != SIDE || map.shape()[3] != SIDE {
         return Err(Error::other("the model returned a map of the wrong size"));
     }
@@ -404,11 +381,8 @@ mod tests {
     fn keeping_almost_nothing_is_called_out() {
         let rgb = image::RgbImage::from_pixel(30, 30, image::Rgb([9, 9, 9]));
         let mask = GrayImage::new(30, 30); // all zero
-        let (_, report) = composite(
-            &DynamicImage::ImageRgb8(rgb),
-            &mask,
-            &CutoutOptions::default(),
-        );
+        let (_, report) =
+            composite(&DynamicImage::ImageRgb8(rgb), &mask, &CutoutOptions::default());
         assert!(
             report.warnings.iter().any(|w| w.contains("Almost nothing")),
             "{:?}",
@@ -420,11 +394,8 @@ mod tests {
     fn keeping_almost_everything_is_called_out_too() {
         let rgb = image::RgbImage::from_pixel(30, 30, image::Rgb([9, 9, 9]));
         let mask = GrayImage::from_pixel(30, 30, image::Luma([255]));
-        let (_, report) = composite(
-            &DynamicImage::ImageRgb8(rgb),
-            &mask,
-            &CutoutOptions::default(),
-        );
+        let (_, report) =
+            composite(&DynamicImage::ImageRgb8(rgb), &mask, &CutoutOptions::default());
         assert!(
             report.warnings.iter().any(|w| w.contains("Almost everything")),
             "{:?}",

@@ -259,9 +259,9 @@ impl Store {
 
     pub fn search(&self, query: &str, limit: u32) -> Result<Vec<FileRecord>> {
         let like = format!("%{query}%");
-        let mut stmt = self.db.prepare(
-            "SELECT * FROM files WHERE name LIKE ?1 ORDER BY created_at DESC LIMIT ?2",
-        )?;
+        let mut stmt = self
+            .db
+            .prepare("SELECT * FROM files WHERE name LIKE ?1 ORDER BY created_at DESC LIMIT ?2")?;
         let rows = stmt.query_map(params![like, limit], row_to_file)?;
         Ok(rows.collect::<std::result::Result<_, _>>()?)
     }
@@ -295,9 +295,8 @@ impl Store {
 
     /// Everything produced from this file, directly or indirectly.
     pub fn derivatives(&self, hash: &str) -> Result<Vec<JobRecord>> {
-        let mut stmt = self
-            .db
-            .prepare("SELECT * FROM jobs WHERE input_hash = ?1 ORDER BY created_at DESC")?;
+        let mut stmt =
+            self.db.prepare("SELECT * FROM jobs WHERE input_hash = ?1 ORDER BY created_at DESC")?;
         let rows = stmt.query_map(params![hash], row_to_job)?;
         Ok(rows.collect::<std::result::Result<_, _>>()?)
     }
@@ -308,10 +307,8 @@ impl Store {
     /// rather than the date it was imported, and the retention rule — which
     /// decides by age — can only be tested if a test can make something old.
     pub fn set_created_at(&self, hash: &str, when_ms: i64) -> Result<()> {
-        self.db.execute(
-            "UPDATE files SET created_at = ?2 WHERE hash = ?1",
-            params![hash, when_ms],
-        )?;
+        self.db
+            .execute("UPDATE files SET created_at = ?2 WHERE hash = ?1", params![hash, when_ms])?;
         Ok(())
     }
 
@@ -335,7 +332,8 @@ impl Store {
     pub fn forget(&self, hash: &str) -> Result<()> {
         let record = self.get(hash)?;
 
-        self.db.execute("DELETE FROM jobs WHERE input_hash = ?1 OR output_hash = ?1", params![hash])?;
+        self.db
+            .execute("DELETE FROM jobs WHERE input_hash = ?1 OR output_hash = ?1", params![hash])?;
         self.db.execute("DELETE FROM files WHERE hash = ?1", params![hash])?;
         self.db.execute("DELETE FROM tags WHERE hash = ?1", params![hash])?;
 
@@ -364,11 +362,10 @@ impl Store {
     }
 
     pub fn usage(&self) -> Result<Usage> {
-        let (files, bytes): (i64, i64) = self.db.query_row(
-            "SELECT COUNT(*), COALESCE(SUM(size), 0) FROM files",
-            [],
-            |r| Ok((r.get(0)?, r.get(1)?)),
-        )?;
+        let (files, bytes): (i64, i64) =
+            self.db.query_row("SELECT COUNT(*), COALESCE(SUM(size), 0) FROM files", [], |r| {
+                Ok((r.get(0)?, r.get(1)?))
+            })?;
         let jobs: i64 = self.db.query_row("SELECT COUNT(*) FROM jobs", [], |r| r.get(0))?;
         Ok(Usage { files: files as u64, bytes: bytes as u64, jobs: jobs as u64 })
     }
@@ -411,10 +408,7 @@ fn row_to_job(row: &rusqlite::Row<'_>) -> rusqlite::Result<JobRecord> {
 }
 
 fn now_millis() -> i64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_millis() as i64)
-        .unwrap_or(0)
+    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or(0)
 }
 
 #[cfg(test)]
@@ -454,7 +448,8 @@ mod tests {
             duration_ms: 1,
         })
         .unwrap();
-        let blob = dir.path().join("blobs").join(&file.hash[0..2]).join(&file.hash[2..4]).join(&file.hash);
+        let blob =
+            dir.path().join("blobs").join(&file.hash[0..2]).join(&file.hash[2..4]).join(&file.hash);
         assert!(blob.exists());
 
         s.forget(&file.hash).unwrap();

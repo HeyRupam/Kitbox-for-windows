@@ -85,11 +85,7 @@ pub fn scan_image(source: &DynamicImage, options: &ScanOptions) -> (DynamicImage
     };
     let cleaned = enhance(flattened, options);
 
-    let result = ScanResult {
-        edges_found,
-        width: cleaned.width(),
-        height: cleaned.height(),
-    };
+    let result = ScanResult { edges_found, width: cleaned.width(), height: cleaned.height() };
     (DynamicImage::ImageRgb8(cleaned), result)
 }
 
@@ -188,9 +184,7 @@ fn detect_in(grey: &GrayImage, scale: f32) -> Option<Quad> {
         (top_left.1 + top_right.1 + bottom_right.1 + bottom_left.1) / 4.0,
     );
     const INSET: f32 = 0.006;
-    let pull = |p: (f32, f32)| {
-        (p.0 + (centre.0 - p.0) * INSET, p.1 + (centre.1 - p.1) * INSET)
-    };
+    let pull = |p: (f32, f32)| (p.0 + (centre.0 - p.0) * INSET, p.1 + (centre.1 - p.1) * INSET);
 
     let quad = [pull(top_left), pull(top_right), pull(bottom_right), pull(bottom_left)];
     if !plausible(&quad, w as f32, h as f32) {
@@ -324,13 +318,12 @@ fn homography(from: &Quad, to: &Quad) -> Option<[f32; 8]> {
 
     // Gaussian elimination with partial pivoting.
     for column in 0..8 {
-        let pivot = (column..8)
-            .max_by(|a, b| {
-                m[*a][column]
-                    .abs()
-                    .partial_cmp(&m[*b][column].abs())
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            })?;
+        let pivot = (column..8).max_by(|a, b| {
+            m[*a][column]
+                .abs()
+                .partial_cmp(&m[*b][column].abs())
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })?;
         if m[pivot][column].abs() < 1e-8 {
             return None;
         }
@@ -347,6 +340,9 @@ fn homography(from: &Quad, to: &Quad) -> Option<[f32; 8]> {
             if factor == 0.0 {
                 continue;
             }
+            // Row operations on a matrix: both indices matter, and an
+            // iterator over one row cannot also read the other.
+            #[allow(clippy::needless_range_loop)]
             for k in column..9 {
                 m[row][k] -= factor * m[column][k];
             }
@@ -516,10 +512,7 @@ pub fn scan_to_pdf(
     });
 
     let bytes = crate::engine::pdf::images_to_pdf(&cleaned, pdf)?;
-    Ok((
-        bytes,
-        ScanReport { pages: images.len() as u32, flattened, whole_frame, note },
-    ))
+    Ok((bytes, ScanReport { pages: images.len() as u32, flattened, whole_frame, note }))
 }
 
 #[cfg(test)]
@@ -631,7 +624,8 @@ mod tests {
     fn detection_can_be_turned_off() {
         let quad: Quad = [(100.0, 80.0), (500.0, 90.0), (510.0, 560.0), (90.0, 550.0)];
         let photo = photo_of_a_page(quad, 640, 640);
-        let options = ScanOptions { detect_edges: false, mode: ScanMode::Colour, ..Default::default() };
+        let options =
+            ScanOptions { detect_edges: false, mode: ScanMode::Colour, ..Default::default() };
         let (scanned, result) = scan_image(&photo, &options);
         assert!(!result.edges_found);
         assert_eq!((scanned.width(), scanned.height()), (640, 640));
@@ -653,8 +647,7 @@ mod tests {
         }
         let photo = DynamicImage::ImageRgb8(canvas);
 
-        let options =
-            ScanOptions { mode: ScanMode::Document, detect_edges: false, strength: 0.6 };
+        let options = ScanOptions { mode: ScanMode::Document, detect_edges: false, strength: 0.6 };
         let (scanned, _) = scan_image(&photo, &options);
         let rgb = scanned.to_rgb8();
 
@@ -707,11 +700,8 @@ mod tests {
     fn the_pdf_reports_which_pages_it_could_not_find_edges_on() {
         let quad: Quad = [(120.0, 90.0), (520.0, 130.0), (560.0, 600.0), (80.0, 560.0)];
         let good = encode(&photo_of_a_page(quad, 640, 700));
-        let flat = encode(&DynamicImage::ImageRgb8(RgbImage::from_pixel(
-            400,
-            300,
-            Rgb([200, 200, 200]),
-        )));
+        let flat =
+            encode(&DynamicImage::ImageRgb8(RgbImage::from_pixel(400, 300, Rgb([200, 200, 200]))));
 
         let (pdf, report) = scan_to_pdf(
             &[good, flat],

@@ -18,7 +18,9 @@
 use lopdf::{Document, ObjectId};
 use serde::{Deserialize, Serialize};
 
-use super::overlay::{escape_text, rotation_of, stamp_page, text_width, Frame, FONT_NAME, IMAGE_NAME, STATE_NAME};
+use super::overlay::{
+    escape_text, rotation_of, stamp_page, text_width, Frame, FONT_NAME, IMAGE_NAME, STATE_NAME,
+};
 use super::pages::{materialise_inherited, media_box};
 use crate::error::{Error, Result};
 
@@ -122,7 +124,9 @@ pub fn sign(pdf: &[u8], signature: &[u8], options: &SignOptions) -> Result<(Vec<
             return Err(Error::invalid("the signature's position is off the page"));
         }
         if !(0.01..=1.0).contains(&spot.width) {
-            return Err(Error::invalid("the signature's width has to be between 1% and 100% of the page"));
+            return Err(Error::invalid(
+                "the signature's width has to be between 1% and 100% of the page",
+            ));
         }
     }
 
@@ -219,12 +223,7 @@ pub fn sign(pdf: &[u8], signature: &[u8], options: &SignOptions) -> Result<(Vec<
 
     Ok((
         out,
-        SignReport {
-            pages_signed,
-            placements,
-            note: NOT_CRYPTOGRAPHIC.to_string(),
-            warnings,
-        },
+        SignReport { pages_signed, placements, note: NOT_CRYPTOGRAPHIC.to_string(), warnings },
     ))
 }
 
@@ -294,17 +293,17 @@ mod tests {
         let (out, _) = sign(&src, &signature_png(), &options).unwrap();
 
         let doc = Document::load_mem(&out).unwrap();
-        let has_mask = doc.objects.values().any(|o| {
-            matches!(o, lopdf::Object::Stream(s) if s.dict.has(b"SMask"))
-        });
+        let has_mask = doc
+            .objects
+            .values()
+            .any(|o| matches!(o, lopdf::Object::Stream(s) if s.dict.has(b"SMask")));
         assert!(has_mask, "the signature must carry its alpha channel");
     }
 
     #[test]
     fn one_image_serves_however_many_placements() {
         let src = testkit::pdf_scan(6, 200, 260, 70);
-        let options =
-            SignOptions { spots: (1..=6).map(spot).collect(), caption: None };
+        let options = SignOptions { spots: (1..=6).map(spot).collect(), caption: None };
         let (out, report) = sign(&src, &signature_png(), &options).unwrap();
         assert_eq!(report.placements, 6);
         assert_eq!(report.pages_signed, vec![1, 2, 3, 4, 5, 6]);

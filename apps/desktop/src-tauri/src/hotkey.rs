@@ -91,11 +91,11 @@ pub fn put_file_on_clipboard(path: &Path) -> Result<(), String> {
     // round: open the clipboard, clear it, write the one file, let the guard
     // close it on the way out.
     let files = [path.display().to_string()];
-    let _clipboard = Clipboard::new_attempts(10)
-        .map_err(|e| format!("the clipboard was busy: {e}"))?;
+    let _clipboard =
+        Clipboard::new_attempts(10).map_err(|e| format!("the clipboard was busy: {e}"))?;
     raw::empty().map_err(|e| format!("the clipboard could not be cleared: {e}"))?;
     formats::FileList
-        .write_clipboard(&&files[..])
+        .write_clipboard(&files[..])
         .map_err(|e| format!("the file could not be put on the clipboard: {e}"))
 }
 
@@ -135,10 +135,7 @@ pub fn squeeze(bytes: &[u8], target: mt_core::SizeTarget) -> Result<(Vec<u8>, St
 
 /// A name for something that never had one.
 pub fn name_for(now: std::time::SystemTime) -> String {
-    let stamp = now
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or_default();
+    let stamp = now.duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or_default();
     format!("clipboard-{stamp}.jpg")
 }
 

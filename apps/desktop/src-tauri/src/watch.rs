@@ -102,12 +102,13 @@ pub fn settle(path: &Path, patience: Duration) -> Option<u64> {
         let size = std::fs::metadata(path).ok().map(|m| m.len());
         match (size, previous) {
             // Two readings the same, and not empty: it has stopped growing.
-            (Some(now), Some(before)) if now == before && now > 0 => {
+            (Some(now), Some(before))
+                if now == before && now > 0
                 // One last check that it can actually be opened — on Windows a
                 // file can have its final size and still be locked.
-                if std::fs::File::open(path).is_ok() {
-                    return Some(now);
-                }
+                && std::fs::File::open(path).is_ok() =>
+            {
+                return Some(now);
             }
             _ => {}
         }
@@ -123,11 +124,7 @@ pub fn settle(path: &Path, patience: Duration) -> Option<u64> {
 pub fn already_there(folder: &Path) -> HashSet<PathBuf> {
     std::fs::read_dir(folder)
         .map(|entries| {
-            entries
-                .filter_map(|e| e.ok())
-                .map(|e| e.path())
-                .filter(|p| p.is_file())
-                .collect()
+            entries.filter_map(|e| e.ok()).map(|e| e.path()).filter(|p| p.is_file()).collect()
         })
         .unwrap_or_default()
 }

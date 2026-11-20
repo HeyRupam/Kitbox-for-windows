@@ -1,0 +1,5 @@
+# The style this codebase was written in: full-width struct literals and
+# matches, rather than the narrow defaults, which would break a great many
+# single-line values across three lines each.
+max_width = 100
+use_small_heuristics = "Max"

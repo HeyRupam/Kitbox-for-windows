@@ -89,15 +89,18 @@ pub fn judge(
 }
 
 /// What the rule would take right now.
-pub fn plan<'a>(store: &Store, files: &'a [FileRecord], policy: &Policy, now_ms: i64) -> Vec<Candidate<'a>> {
+pub fn plan<'a>(
+    store: &Store,
+    files: &'a [FileRecord],
+    policy: &Policy,
+    now_ms: i64,
+) -> Vec<Candidate<'a>> {
     files
         .iter()
         .map(|file| {
             // Something was made from it, so it is a step rather than a result.
-            let is_intermediate = store
-                .derivatives(&file.hash)
-                .map(|jobs| !jobs.is_empty())
-                .unwrap_or(false);
+            let is_intermediate =
+                store.derivatives(&file.hash).map(|jobs| !jobs.is_empty()).unwrap_or(false);
             Candidate { file, why_kept: judge(file, is_intermediate, policy, now_ms) }
         })
         .collect()
@@ -259,13 +262,21 @@ mod tests {
         let scan = store
             .put(
                 b"the original scan, large",
-                mt_store::FileMeta { name: "scan.jpg".into(), kind: "jpeg".into(), ..Default::default() },
+                mt_store::FileMeta {
+                    name: "scan.jpg".into(),
+                    kind: "jpeg".into(),
+                    ..Default::default()
+                },
             )
             .unwrap();
         let small = store
             .put(
                 b"the compressed copy",
-                mt_store::FileMeta { name: "scan-kitbox.jpg".into(), kind: "jpeg".into(), ..Default::default() },
+                mt_store::FileMeta {
+                    name: "scan-kitbox.jpg".into(),
+                    kind: "jpeg".into(),
+                    ..Default::default()
+                },
             )
             .unwrap();
         store
@@ -301,7 +312,11 @@ mod tests {
         let kept = store
             .put(
                 b"an old file somebody cares about",
-                mt_store::FileMeta { name: "keep.jpg".into(), kind: "jpeg".into(), ..Default::default() },
+                mt_store::FileMeta {
+                    name: "keep.jpg".into(),
+                    kind: "jpeg".into(),
+                    ..Default::default()
+                },
             )
             .unwrap();
         store.set_created_at(&kept.hash, now() - 900 * DAY).unwrap();
@@ -325,7 +340,11 @@ mod tests {
         let old = store
             .put(
                 b"an old scan",
-                mt_store::FileMeta { name: "old.jpg".into(), kind: "jpeg".into(), ..Default::default() },
+                mt_store::FileMeta {
+                    name: "old.jpg".into(),
+                    kind: "jpeg".into(),
+                    ..Default::default()
+                },
             )
             .unwrap();
         store.set_created_at(&old.hash, now() - 200 * DAY).expect("backdate it");

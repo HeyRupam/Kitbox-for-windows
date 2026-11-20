@@ -43,10 +43,14 @@ struct Row {
 }
 
 fn corpus() -> Vec<Case> {
-    use mt_core::testkit::{encode_jpeg, photo, pdf_scan, pdf_text_only};
+    use mt_core::testkit::{encode_jpeg, pdf_scan, pdf_text_only, photo};
 
     vec![
-        Case { what: "phone photo 12 MP", bytes: encode_jpeg(&photo(4000, 3000), 92), is_pdf: false },
+        Case {
+            what: "phone photo 12 MP",
+            bytes: encode_jpeg(&photo(4000, 3000), 92),
+            is_pdf: false,
+        },
         Case { what: "photo 5 MP", bytes: encode_jpeg(&photo(2560, 1920), 90), is_pdf: false },
         Case { what: "photo 2 MP", bytes: encode_jpeg(&photo(1600, 1200), 88), is_pdf: false },
         Case { what: "small crop", bytes: encode_jpeg(&photo(640, 480), 85), is_pdf: false },
@@ -127,8 +131,8 @@ fn how_well_the_solver_does() {
     }
 
     println!(
-        "\n{:<20} {:<14} {:>9} {:>9} {:>7} {:>7} {:>9}  {}",
-        "file", "asked for", "before", "after", "probes", "ms", "kept", "note"
+        "\n{:<20} {:<14} {:>9} {:>9} {:>7} {:>7} {:>9}  note",
+        "file", "asked for", "before", "after", "probes", "ms", "kept"
     );
     println!("{}", "-".repeat(96));
     for row in &rows {
@@ -146,8 +150,7 @@ fn how_well_the_solver_does() {
     }
 
     let landed = rows.iter().filter(|r| r.landed).count();
-    let probes: f64 =
-        rows.iter().map(|r| r.probes as f64).sum::<f64>() / rows.len() as f64;
+    let probes: f64 = rows.iter().map(|r| r.probes as f64).sum::<f64>() / rows.len() as f64;
     let scored: Vec<f32> = rows.iter().filter_map(|r| r.score).collect();
     let kept = scored.iter().sum::<f32>() / scored.len().max(1) as f32;
     let slowest = rows.iter().map(|r| r.ms).max().unwrap_or(0);

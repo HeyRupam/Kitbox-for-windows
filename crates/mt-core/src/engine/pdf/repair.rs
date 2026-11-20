@@ -75,7 +75,8 @@ pub fn repair(bytes: &[u8]) -> Result<(Vec<u8>, RepairReport)> {
         // Some files have junk before the header; the parser copes, but it is
         // worth saying rather than quietly fixing.
         if find(bytes, b"%PDF-").is_some() {
-            findings.push("The file didn't start with a PDF header; one was found further in.".into());
+            findings
+                .push("The file didn't start with a PDF header; one was found further in.".into());
         } else {
             return Err(Error::invalid(
                 "this doesn't look like a PDF at all — there is no PDF header anywhere in it",
@@ -83,8 +84,10 @@ pub fn repair(bytes: &[u8]) -> Result<(Vec<u8>, RepairReport)> {
         }
     }
     if find(&bytes[bytes.len().saturating_sub(2048)..], b"%%EOF").is_none() {
-        findings.push("The end-of-file marker is missing, so the file was probably truncated.".into());
-        caveats.push("Anything the file was cut off before is gone and cannot be recovered.".into());
+        findings
+            .push("The end-of-file marker is missing, so the file was probably truncated.".into());
+        caveats
+            .push("Anything the file was cut off before is gone and cannot be recovered.".into());
     }
 
     // Gentlest first: a normal lenient load, which already corrects small
@@ -122,9 +125,7 @@ pub fn repair(bytes: &[u8]) -> Result<(Vec<u8>, RepairReport)> {
             // can be found in the bytes.
             let options = LoadOptions { force_reconstruct: true, ..Default::default() };
             let doc = Document::load_mem_with_options(bytes, options).map_err(|e| {
-                Error::invalid(format!(
-                    "this file is too damaged to recover anything from: {e}"
-                ))
+                Error::invalid(format!("this file is too damaged to recover anything from: {e}"))
             })?;
             findings.push("Recovered by scanning the file for whatever objects survived.".into());
             (doc, Severity::Salvaged)
@@ -175,13 +176,7 @@ pub fn repair(bytes: &[u8]) -> Result<(Vec<u8>, RepairReport)> {
 
     Ok((
         output,
-        RepairReport {
-            severity,
-            pages,
-            objects: doc.objects.len() as u32,
-            findings,
-            caveats,
-        },
+        RepairReport { severity, pages, objects: doc.objects.len() as u32, findings, caveats },
     ))
 }
 
@@ -316,10 +311,8 @@ mod tests {
     fn a_broken_cross_reference_offset_is_recovered() {
         let mut src = testkit::pdf_scan(2, 200, 260, 70);
         // Point startxref somewhere useless.
-        let at = src
-            .windows(9)
-            .rposition(|w| w == b"startxref")
-            .expect("fixtures have a startxref");
+        let at =
+            src.windows(9).rposition(|w| w == b"startxref").expect("fixtures have a startxref");
         let tail = String::from_utf8_lossy(&src[at..]).to_string();
         let line_end = tail.find('\n').unwrap() + 1;
         let number_end = tail[line_end..].find('\n').unwrap() + line_end;
@@ -361,10 +354,7 @@ mod tests {
             // refusal has to be clear rather than a silent empty document.
             Err(e) => {
                 let message = e.to_string();
-                assert!(
-                    message.contains("damaged") || message.contains("no pages"),
-                    "{message}"
-                );
+                assert!(message.contains("damaged") || message.contains("no pages"), "{message}");
             }
         }
     }
@@ -386,11 +376,7 @@ mod tests {
 
         let (out, report) = repair(&damaged).unwrap();
         assert_eq!(report.pages, 3, "every loose page should be found");
-        assert!(
-            report.findings.iter().any(|f| f.contains("loose page")),
-            "{:?}",
-            report.findings
-        );
+        assert!(report.findings.iter().any(|f| f.contains("loose page")), "{:?}", report.findings);
         assert!(
             report.caveats.iter().any(|c| c.contains("Page order is a guess")),
             "should admit the order is uncertain: {:?}",

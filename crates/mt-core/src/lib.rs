@@ -5,11 +5,11 @@
 //! back bytes and a report. That is what lets the same engine run on Windows today
 //! and on Android later without a rewrite.
 
+pub mod batch;
+pub mod chain;
 pub mod engine;
 pub mod error;
 pub mod format;
-pub mod batch;
-pub mod chain;
 pub mod job;
 pub mod preset;
 pub mod quality;
@@ -26,4 +26,4 @@ pub mod testkit;
 pub use error::{Error, Result};
 pub use format::FileKind;
 pub use size::{format_size, parse_size, parse_target};
-pub use target::{Bias, Encodable, Outcome, SizeTarget, Solved, solve};
+pub use target::{solve, Bias, Encodable, Outcome, SizeTarget, Solved};

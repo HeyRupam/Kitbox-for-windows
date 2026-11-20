@@ -8,9 +8,8 @@ fn main() {
     let how = args.next().unwrap_or_else(|| "sharpen".into());
     let model_path = args.next();
 
-    let model = model_path.map(|p| {
-        mt_core::engine::image::UpscaleModel::load(std::fs::read(&p).unwrap()).unwrap()
-    });
+    let model = model_path
+        .map(|p| mt_core::engine::image::UpscaleModel::load(std::fs::read(&p).unwrap()).unwrap());
     let options = mt_core::engine::image::UpscaleOptions {
         method: if how == "reconstruct" {
             mt_core::engine::image::UpscaleMethod::Reconstruct
@@ -21,16 +20,17 @@ fn main() {
         sharpen: 0.4,
     };
 
-    match mt_core::engine::image::upscale(
-        &std::fs::read(&input).unwrap(),
-        model.as_ref(),
-        &options,
-    ) {
+    match mt_core::engine::image::upscale(&std::fs::read(&input).unwrap(), model.as_ref(), &options)
+    {
         Ok((image, report)) => {
             image.save(&out).unwrap();
             println!(
                 "{:?}×{:?} -> {:?}  {:?}  {} tiles  {:.1}s  -> {out}",
-                report.from.0, report.from.1, report.to, report.method, report.tiles,
+                report.from.0,
+                report.from.1,
+                report.to,
+                report.method,
+                report.tiles,
                 report.seconds
             );
             for w in &report.warnings {

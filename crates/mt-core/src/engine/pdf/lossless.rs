@@ -66,14 +66,7 @@ fn strip_document_metadata(doc: &mut Document) -> usize {
         }
     }
 
-    for key in [
-        &b"Title"[..],
-        b"Author",
-        b"Subject",
-        b"Keywords",
-        b"Creator",
-        b"Producer",
-    ] {
+    for key in [&b"Title"[..], b"Author", b"Subject", b"Keywords", b"Creator", b"Producer"] {
         if let Ok(Object::Dictionary(info)) = doc.trailer.get_mut(b"Info") {
             if info.remove(key).is_some() {
                 removed += 1;
@@ -83,14 +76,8 @@ fn strip_document_metadata(doc: &mut Document) -> usize {
     // The Info dictionary is usually a reference rather than inline.
     if let Ok(Object::Reference(id)) = doc.trailer.get(b"Info").cloned() {
         if let Ok(info) = doc.get_dictionary_mut(id) {
-            for key in [
-                &b"Title"[..],
-                b"Author",
-                b"Subject",
-                b"Keywords",
-                b"Creator",
-                b"Producer",
-            ] {
+            for key in [&b"Title"[..], b"Author", b"Subject", b"Keywords", b"Creator", b"Producer"]
+            {
                 if info.remove(key).is_some() {
                     removed += 1;
                 }

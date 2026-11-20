@@ -222,9 +222,9 @@ fn prepare(
 
     match target_pixels {
         Some(width) => {
-            let height =
-                ((decoded.height() as f32 * width as f32 / decoded.width() as f32).round() as u32)
-                    .max(1);
+            let height = ((decoded.height() as f32 * width as f32 / decoded.width() as f32).round()
+                as u32)
+                .max(1);
             let resized = decoded.resize_exact(width, height, FilterType::Lanczos3);
             let jpeg = super::images::encode_jpeg_for_pdf(&resized, opts.jpeg_quality, gray)?;
             Ok((jpeg, width, height, gray))
@@ -286,10 +286,7 @@ mod tests {
         let img = &report.images[0];
         // Pixel aspect and drawn aspect must agree, or the picture is distorted.
         let pixel_aspect = img.width as f32 / img.height as f32;
-        assert!(
-            (pixel_aspect - 2.0).abs() < 0.02,
-            "pixel aspect drifted: {pixel_aspect}"
-        );
+        assert!((pixel_aspect - 2.0).abs() < 0.02, "pixel aspect drifted: {pixel_aspect}");
     }
 
     #[test]
@@ -297,19 +294,18 @@ mod tests {
         let jpeg = photo_jpeg(500, 400);
         // No resolution cap, so there is no reason to touch the bytes.
         let opts = ImagesToPdfOptions { max_dpi: None, ..Default::default() };
-        let pdf = images_to_pdf(&[jpeg.clone()], &opts).unwrap();
-        assert!(
-            find_bytes(&pdf, &jpeg),
-            "the original JPEG should appear in the file untouched"
-        );
+        let pdf = images_to_pdf(std::slice::from_ref(&jpeg), &opts).unwrap();
+        assert!(find_bytes(&pdf, &jpeg), "the original JPEG should appear in the file untouched");
     }
 
     #[test]
     fn the_resolution_cap_shrinks_oversized_photos() {
         let big = photo_jpeg(4000, 3000);
-        let capped =
-            images_to_pdf(&[big.clone()], &ImagesToPdfOptions { max_dpi: Some(150), ..Default::default() })
-                .unwrap();
+        let capped = images_to_pdf(
+            std::slice::from_ref(&big),
+            &ImagesToPdfOptions { max_dpi: Some(150), ..Default::default() },
+        )
+        .unwrap();
         let uncapped =
             images_to_pdf(&[big], &ImagesToPdfOptions { max_dpi: None, ..Default::default() })
                 .unwrap();

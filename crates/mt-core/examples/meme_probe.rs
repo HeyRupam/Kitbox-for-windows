@@ -22,7 +22,11 @@ fn main() {
     image.save(&out).unwrap();
     println!(
         "{}x{} in {:?}  {} top line(s), {} bottom",
-        report.width, report.height, started.elapsed(), report.top_lines, report.bottom_lines
+        report.width,
+        report.height,
+        started.elapsed(),
+        report.top_lines,
+        report.bottom_lines
     );
     for w in &report.warnings {
         println!("  warning: {w}");

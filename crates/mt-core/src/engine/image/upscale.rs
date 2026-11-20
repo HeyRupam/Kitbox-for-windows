@@ -172,9 +172,8 @@ pub fn enlarge(
                     MODEL_PIXEL_LIMIT as f32 / 1_000_000.0,
                 )));
             }
-            let model = model.ok_or_else(|| {
-                Error::unsupported("the upscaling model isn't downloaded yet")
-            })?;
+            let model = model
+                .ok_or_else(|| Error::unsupported("the upscaling model isn't downloaded yet"))?;
 
             let (big, tiles) = reconstruct(source, model)?;
             // The model is fixed at 4×; anything else is resampled back from
@@ -286,9 +285,8 @@ fn run(model: &Model, patch: &RgbImage) -> Result<RgbImage> {
         .inner
         .run_one(input.view().into(), None)
         .map_err(|e| Error::other(format!("the model couldn't be run: {e}")))?;
-    let tensor: NdTensor<f32, 4> = output
-        .try_into()
-        .map_err(|_| Error::other("the model returned something unexpected"))?;
+    let tensor: NdTensor<f32, 4> =
+        output.try_into().map_err(|_| Error::other("the model returned something unexpected"))?;
 
     let [_, channels, oh, ow] = tensor.shape();
     if channels < 3 {
@@ -468,8 +466,7 @@ mod tests {
         };
         let boundary = TILE * MODEL_SCALE - 1;
         let at_seam = column_gap(boundary);
-        let nearby: f32 =
-            (1..=6).map(|d| column_gap(boundary - d * 7)).sum::<f32>() / 6.0;
+        let nearby: f32 = (1..=6).map(|d| column_gap(boundary - d * 7)).sum::<f32>() / 6.0;
         assert!(
             at_seam <= nearby * 3.0 + 6.0,
             "tile boundary stands out: {at_seam} against {nearby} nearby"

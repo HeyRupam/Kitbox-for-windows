@@ -6,7 +6,10 @@ use rten_tensor::NdTensor;
 fn main() {
     let path = std::env::args().nth(1).expect("usage: time_model <model.onnx>");
     let model = rten::Model::load(std::fs::read(&path).unwrap()).unwrap();
-    println!("threads available: {}", std::thread::available_parallelism().map(|n| n.get()).unwrap_or(0));
+    println!(
+        "threads available: {}",
+        std::thread::available_parallelism().map(|n| n.get()).unwrap_or(0)
+    );
 
     for side in [64usize, 128, 192, 256] {
         let input: NdTensor<f32, 4> = NdTensor::zeros([1, 3, side, side]);

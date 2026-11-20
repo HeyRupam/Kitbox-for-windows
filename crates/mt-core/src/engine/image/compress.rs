@@ -295,7 +295,6 @@ fn cover_crop(src: &DynamicImage, w: u32, h: u32) -> DynamicImage {
     resized.crop_imm(x, y, w, h)
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -489,9 +488,8 @@ mod tests {
             },
         )
         .unwrap();
-        let (w, h) = ::image::load_from_memory(exact.bytes())
-            .map(|i| (i.width(), i.height()))
-            .unwrap();
+        let (w, h) =
+            ::image::load_from_memory(exact.bytes()).map(|i| (i.width(), i.height())).unwrap();
         assert_eq!((w, h), (200, 230));
     }
 }

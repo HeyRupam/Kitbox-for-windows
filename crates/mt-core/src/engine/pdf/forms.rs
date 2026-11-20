@@ -24,6 +24,9 @@
 //! the values can't be edited or accidentally cleared. It is what "submit a
 //! filled PDF" nearly always means, and it is one-way — which the report says.
 
+/// A widget's box on the page: left, bottom, right, top, in points.
+type Rect = (f32, f32, f32, f32);
+
 use std::collections::BTreeMap;
 
 use lopdf::content::{Content, Operation};
@@ -185,24 +188,16 @@ fn walk(
 ) {
     let Ok(dict) = doc.get_dictionary(id).cloned() else { return };
 
-    let partial = dict
-        .get(b"T")
-        .ok()
-        .and_then(|o| o.as_str().ok())
-        .map(decode_text)
-        .unwrap_or_default();
+    let partial =
+        dict.get(b"T").ok().and_then(|o| o.as_str().ok()).map(decode_text).unwrap_or_default();
     let name = match (prefix.is_empty(), partial.is_empty()) {
         (_, true) => prefix.to_string(),
         (true, false) => partial.clone(),
         (false, false) => format!("{prefix}.{partial}"),
     };
 
-    let kind_name = dict
-        .get(b"FT")
-        .ok()
-        .and_then(|o| o.as_name().ok())
-        .map(|n| n.to_vec())
-        .or(inherited_kind);
+    let kind_name =
+        dict.get(b"FT").ok().and_then(|o| o.as_name().ok()).map(|n| n.to_vec()).or(inherited_kind);
     let flags = dict.get(b"Ff").ok().and_then(|o| o.as_i64().ok()).unwrap_or(inherited_flags);
 
     // Kids are either child fields or this field's own widgets.
@@ -230,9 +225,7 @@ fn walk(
     let child_fields: Vec<ObjectId> = kids
         .iter()
         .copied()
-        .filter(|kid| {
-            doc.get_dictionary(*kid).map(|d| d.has(b"T")).unwrap_or(false)
-        })
+        .filter(|kid| doc.get_dictionary(*kid).map(|d| d.has(b"T")).unwrap_or(false))
         .collect();
 
     if !child_fields.is_empty() {
@@ -247,17 +240,13 @@ fn walk(
 
     // The widgets are this node itself when it has no kids, otherwise its kids.
     let widgets: Vec<ObjectId> = if kids.is_empty() { vec![id] } else { kids };
-    let mut pages: Vec<u32> =
-        widgets.iter().filter_map(|w| widget_pages.get(w).copied()).collect();
+    let mut pages: Vec<u32> = widgets.iter().filter_map(|w| widget_pages.get(w).copied()).collect();
     pages.sort_unstable();
     pages.dedup();
 
     let mut options = match kind {
         FieldKind::Checkbox | FieldKind::Radio => {
-            let mut states: Vec<String> = widgets
-                .iter()
-                .flat_map(|w| on_states(doc, *w))
-                .collect();
+            let mut states: Vec<String> = widgets.iter().flat_map(|w| on_states(doc, *w)).collect();
             states.sort();
             states.dedup();
             states
@@ -323,22 +312,18 @@ fn choice_options(doc: &Document, dict: &Dictionary) -> Vec<String> {
     let Ok(opt) = dict.get(b"Opt") else { return Vec::new() };
     let list = match opt {
         Object::Array(items) => items.clone(),
-        Object::Reference(id) => doc
-            .get_object(*id)
-            .ok()
-            .and_then(|o| o.as_array().ok().cloned())
-            .unwrap_or_default(),
+        Object::Reference(id) => {
+            doc.get_object(*id).ok().and_then(|o| o.as_array().ok().cloned()).unwrap_or_default()
+        }
         _ => return Vec::new(),
     };
     list.iter()
         .map(|item| match item {
             // An option can be [export, display]; the display one is what a
             // person recognises.
-            Object::Array(pair) => pair
-                .last()
-                .and_then(|o| o.as_str().ok())
-                .map(decode_text)
-                .unwrap_or_default(),
+            Object::Array(pair) => {
+                pair.last().and_then(|o| o.as_str().ok()).map(decode_text).unwrap_or_default()
+            }
             other => other.as_str().ok().map(decode_text).unwrap_or_default(),
         })
         .filter(|s| !s.is_empty())
@@ -370,10 +355,8 @@ fn current_value(doc: &Document, dict: &Dictionary) -> Option<String> {
 /// encoding, which is Latin-1 for everything a form is likely to hold.
 fn decode_text(bytes: &[u8]) -> String {
     if bytes.len() >= 2 && bytes[0] == 0xFE && bytes[1] == 0xFF {
-        let units: Vec<u16> = bytes[2..]
-            .chunks_exact(2)
-            .map(|pair| u16::from_be_bytes([pair[0], pair[1]]))
-            .collect();
+        let units: Vec<u16> =
+            bytes[2..].chunks_exact(2).map(|pair| u16::from_be_bytes([pair[0], pair[1]])).collect();
         String::from_utf16_lossy(&units)
     } else {
         bytes.iter().map(|b| *b as char).collect()
@@ -418,8 +401,7 @@ pub fn fill(bytes: &[u8], options: &FillOptions) -> Result<(Vec<u8>, FillReport)
         warnings: Vec::new(),
     };
 
-    let by_name: BTreeMap<&str, &Field> =
-        known.iter().map(|f| (f.name.as_str(), f)).collect();
+    let by_name: BTreeMap<&str, &Field> = known.iter().map(|f| (f.name.as_str(), f)).collect();
     for name in options.values.keys() {
         if !by_name.contains_key(name.as_str()) {
             report.unknown.push(name.clone());
@@ -506,12 +488,8 @@ fn locate_walk(
     out: &mut BTreeMap<String, (ObjectId, Vec<ObjectId>)>,
 ) {
     let Ok(dict) = doc.get_dictionary(id).cloned() else { return };
-    let partial = dict
-        .get(b"T")
-        .ok()
-        .and_then(|o| o.as_str().ok())
-        .map(decode_text)
-        .unwrap_or_default();
+    let partial =
+        dict.get(b"T").ok().and_then(|o| o.as_str().ok()).map(decode_text).unwrap_or_default();
     let name = match (prefix.is_empty(), partial.is_empty()) {
         (_, true) => prefix.to_string(),
         (true, false) => partial,
@@ -523,7 +501,9 @@ fn locate_walk(
         .ok()
         .and_then(|o| match o {
             Object::Array(items) => Some(items.clone()),
-            Object::Reference(r) => doc.get_object(*r).ok().and_then(|o| o.as_array().ok().cloned()),
+            Object::Reference(r) => {
+                doc.get_object(*r).ok().and_then(|o| o.as_array().ok().cloned())
+            }
             _ => None,
         })
         .map(|items| {
@@ -624,7 +604,7 @@ fn set_button(
         // A radio group's other widgets have to show Off, so only the one
         // carrying this state turns on.
         let states = on_states(doc, *widget);
-        let shown = if chosen != "Off" && states.iter().any(|s| *s == chosen) {
+        let shown = if chosen != "Off" && states.contains(&chosen) {
             chosen.clone()
         } else {
             "Off".to_string()
@@ -653,7 +633,11 @@ fn widget_rect(doc: &Document, widget: ObjectId) -> Option<(f32, f32, f32, f32)>
 }
 
 /// Font, size and colour the form asked for, from a `/DA` string.
-fn default_appearance(doc: &Document, widget: ObjectId, field_id: ObjectId) -> (String, f32, [f32; 3]) {
+fn default_appearance(
+    doc: &Document,
+    widget: ObjectId,
+    field_id: ObjectId,
+) -> (String, f32, [f32; 3]) {
     let read = |id: ObjectId| -> Option<String> {
         doc.get_dictionary(id)
             .ok()?
@@ -663,11 +647,13 @@ fn default_appearance(doc: &Document, widget: ObjectId, field_id: ObjectId) -> (
             .ok()
             .map(|b| String::from_utf8_lossy(b).to_string())
     };
-    let form_default = doc
-        .catalog()
-        .ok()
-        .map(|c| sub_dictionary(doc, c, b"AcroForm"))
-        .and_then(|f| f.get(b"DA").ok().and_then(|o| o.as_str().ok()).map(|b| String::from_utf8_lossy(b).to_string()));
+    let form_default =
+        doc.catalog().ok().map(|c| sub_dictionary(doc, c, b"AcroForm")).and_then(|f| {
+            f.get(b"DA")
+                .ok()
+                .and_then(|o| o.as_str().ok())
+                .map(|b| String::from_utf8_lossy(b).to_string())
+        });
 
     let da = read(widget).or_else(|| read(field_id)).or(form_default).unwrap_or_default();
 
@@ -785,10 +771,7 @@ fn text_appearance(
     dict.set("Type", Object::Name(b"XObject".to_vec()));
     dict.set("Subtype", Object::Name(b"Form".to_vec()));
     dict.set("FormType", 1i64);
-    dict.set(
-        "BBox",
-        Object::Array(vec![0.into(), 0.into(), width.into(), height.into()]),
-    );
+    dict.set("BBox", Object::Array(vec![0.into(), 0.into(), width.into(), height.into()]));
     dict.set("Resources", Object::Dictionary(resources));
     Some(Stream::new(dict, content.into_bytes()))
 }
@@ -810,7 +793,8 @@ fn wrap(text: &str, size: f32, width: f32) -> Vec<String> {
             // A single word longer than the box still has to go somewhere.
             while text_width(&line, size) > width && line.chars().count() > 1 {
                 let mut cut = line.chars().count() - 1;
-                while cut > 1 && text_width(&line.chars().take(cut).collect::<String>(), size) > width
+                while cut > 1
+                    && text_width(&line.chars().take(cut).collect::<String>(), size) > width
                 {
                     cut -= 1;
                 }
@@ -873,7 +857,6 @@ pub const ONE_WAY: &str =
      cleared by accident — and nothing can be changed back either. Keep the unflattened copy if \
      you may need to edit it.";
 
-
 /// Draw anything that has a value but nothing to show for it.
 fn ensure_appearances(doc: &mut Document) {
     let known = collect(doc);
@@ -893,8 +876,7 @@ fn ensure_appearances(doc: &mut Document) {
                     // The appearance exists per state; it just isn't being
                     // pointed at because /AS was never set.
                     let states = on_states(doc, *widget);
-                    let shown =
-                        if states.iter().any(|s| *s == value) { value.clone() } else { "Off".into() };
+                    let shown = if states.contains(&value) { value.clone() } else { "Off".into() };
                     if let Ok(dict) = doc.get_dictionary_mut(*widget) {
                         dict.set("AS", Object::Name(shown.into_bytes()));
                     }
@@ -945,33 +927,33 @@ fn flatten_in_place(doc: &mut Document) -> Result<FlattenReport> {
     let page_ids: Vec<ObjectId> = doc.page_iter().collect();
     for (index, page_id) in page_ids.iter().enumerate() {
         let number = index as u32 + 1;
-        let annots: Vec<ObjectId> = match doc.get_dictionary(*page_id).and_then(|p| p.get(b"Annots"))
-        {
-            Ok(Object::Array(items)) => items
-                .iter()
-                .filter_map(|o| match o {
-                    Object::Reference(id) => Some(*id),
-                    _ => None,
-                })
-                .collect(),
-            Ok(Object::Reference(id)) => doc
-                .get_object(*id)
-                .ok()
-                .and_then(|o| o.as_array().ok().cloned())
-                .unwrap_or_default()
-                .iter()
-                .filter_map(|o| match o {
-                    Object::Reference(id) => Some(*id),
-                    _ => None,
-                })
-                .collect(),
-            _ => Vec::new(),
-        };
+        let annots: Vec<ObjectId> =
+            match doc.get_dictionary(*page_id).and_then(|p| p.get(b"Annots")) {
+                Ok(Object::Array(items)) => items
+                    .iter()
+                    .filter_map(|o| match o {
+                        Object::Reference(id) => Some(*id),
+                        _ => None,
+                    })
+                    .collect(),
+                Ok(Object::Reference(id)) => doc
+                    .get_object(*id)
+                    .ok()
+                    .and_then(|o| o.as_array().ok().cloned())
+                    .unwrap_or_default()
+                    .iter()
+                    .filter_map(|o| match o {
+                        Object::Reference(id) => Some(*id),
+                        _ => None,
+                    })
+                    .collect(),
+                _ => Vec::new(),
+            };
         if annots.is_empty() {
             continue;
         }
 
-        let mut drawn: Vec<(usize, ObjectId, (f32, f32, f32, f32))> = Vec::new();
+        let mut drawn: Vec<(usize, ObjectId, Rect)> = Vec::new();
         let mut keep: Vec<Object> = Vec::new();
 
         for widget in annots {
@@ -1102,9 +1084,7 @@ fn inline(
         Ok(Object::Stream(stream)) => stream.clone(),
         _ => return None,
     };
-    let content = stream
-        .decompressed_content()
-        .unwrap_or_else(|_| stream.content.clone());
+    let content = stream.decompressed_content().unwrap_or_else(|_| stream.content.clone());
     let decoded = Content::decode(&content).ok()?;
 
     // The appearance's own box, after its own matrix.
@@ -1123,10 +1103,7 @@ fn inline(
         .unwrap_or_else(|| vec![1.0, 0.0, 0.0, 1.0, 0.0, 0.0]);
 
     let apply = |x: f32, y: f32| -> (f32, f32) {
-        (
-            matrix[0] * x + matrix[2] * y + matrix[4],
-            matrix[1] * x + matrix[3] * y + matrix[5],
-        )
+        (matrix[0] * x + matrix[2] * y + matrix[4], matrix[1] * x + matrix[3] * y + matrix[5])
     };
     let corners = [
         apply(bbox[0], bbox[1]),
@@ -1275,10 +1252,7 @@ mod tests {
         assert_eq!(named(&found, "agree").options, vec!["On"]);
         let radio = named(&found, "contact_by");
         assert_eq!(radio.options, vec!["email", "post"]);
-        assert_eq!(
-            named(&found, "country").options,
-            vec!["India", "United Kingdom", "Singapore"]
-        );
+        assert_eq!(named(&found, "country").options, vec!["India", "United Kingdom", "Singapore"]);
     }
 
     #[test]
@@ -1328,10 +1302,7 @@ mod tests {
         let (out, _) = filled(&[("applicant_name", "Jane")], false);
         let doc = Document::load_mem(&out).unwrap();
         let form = sub_dictionary(&doc, doc.catalog().unwrap(), b"AcroForm");
-        assert_eq!(
-            form.get(b"NeedAppearances").ok().and_then(|o| o.as_bool().ok()),
-            Some(false)
-        );
+        assert_eq!(form.get(b"NeedAppearances").ok().and_then(|o| o.as_bool().ok()), Some(false));
     }
 
     #[test]
@@ -1465,10 +1436,7 @@ mod tests {
 
         // No form left to edit.
         let doc = Document::load_mem(&out).unwrap();
-        assert!(
-            doc.catalog().unwrap().get(b"AcroForm").is_err(),
-            "the form should be gone"
-        );
+        assert!(doc.catalog().unwrap().get(b"AcroForm").is_err(), "the form should be gone");
         assert!(fields(&out).unwrap().is_empty(), "nothing should be fillable");
 
         // But the value is now part of the page.
@@ -1492,8 +1460,8 @@ mod tests {
         assert_eq!(super::super::page_count(&out).unwrap(), 1);
         assert!(report.flattened);
         let doc = Document::load_mem(&out).unwrap();
-        let text = super::super::markdown::page_lines(&doc, doc.page_iter().next().unwrap())
-            .join(" ");
+        let text =
+            super::super::markdown::page_lines(&doc, doc.page_iter().next().unwrap()).join(" ");
         assert!(text.contains("Application"), "the form's own text should survive: {text}");
     }
 
@@ -1548,14 +1516,12 @@ mod tests {
         let mut patched = Vec::new();
         doc.save_to(&mut patched).unwrap();
 
-        let options =
-            FillOptions { values: [("applicant_name".into(), "Jonathan".into())].into(), flatten: false };
+        let options = FillOptions {
+            values: [("applicant_name".into(), "Jonathan".into())].into(),
+            flatten: false,
+        };
         let (out, report) = fill(&patched, &options).unwrap();
-        assert!(
-            report.warnings.iter().any(|w| w.contains("at most 4")),
-            "{:?}",
-            report.warnings
-        );
+        assert!(report.warnings.iter().any(|w| w.contains("at most 4")), "{:?}", report.warnings);
         assert_eq!(named(&fields(&out).unwrap(), "applicant_name").value.as_deref(), Some("Jona"));
     }
 

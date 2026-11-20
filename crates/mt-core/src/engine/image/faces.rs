@@ -59,21 +59,22 @@ pub struct Face {
 
 /// What goes over a face.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "kind", content = "value", rename_all = "snake_case", rename_all_fields = "camelCase")]
+#[serde(
+    tag = "kind",
+    content = "value",
+    rename_all = "snake_case",
+    rename_all_fields = "camelCase"
+)]
+#[derive(Default)]
 pub enum Cover {
     /// Heavy blur. Looks natural; the weakest of the three.
+    #[default]
     Blur,
     /// Mosaic blocks. Also recoverable in principle.
     Pixelate,
     /// A filled rectangle. The only one that certainly destroys what was
     /// underneath.
     Box(#[serde(default)] [u8; 3]),
-}
-
-impl Default for Cover {
-    fn default() -> Self {
-        Cover::Blur
-    }
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -353,8 +354,11 @@ pub fn cover(source: &DynamicImage, faces: &[Face], options: &BlurOptions) -> Dy
                         if n == 0 {
                             continue;
                         }
-                        let mean =
-                            image::Rgb([(total[0] / n) as u8, (total[1] / n) as u8, (total[2] / n) as u8]);
+                        let mean = image::Rgb([
+                            (total[0] / n) as u8,
+                            (total[1] / n) as u8,
+                            (total[2] / n) as u8,
+                        ]);
                         for y in by..ey {
                             for x in bx..ex {
                                 out.put_pixel(x, y, mean);

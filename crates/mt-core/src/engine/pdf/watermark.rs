@@ -134,9 +134,9 @@ fn draw(
     let (mark_w, mark_h, font_size) = match (&options.mark, image_size) {
         (Mark::Text(text), _) => {
             // Default to something that spans about half the page.
-            let size = options
-                .font_size
-                .unwrap_or_else(|| (page_w * 0.5 / text_width(text, 1.0).max(0.1)).clamp(8.0, 200.0));
+            let size = options.font_size.unwrap_or_else(|| {
+                (page_w * 0.5 / text_width(text, 1.0).max(0.1)).clamp(8.0, 200.0)
+            });
             (text_width(text, size), size * 0.72, size)
         }
         (Mark::Image(_), Some((iw, ih))) => {
@@ -216,12 +216,7 @@ fn embed_image(doc: &mut Document, data: &[u8]) -> Result<ObjectId> {
     // Through JPEG so the stream is a format every reader handles, and because
     // a watermark at 15% opacity has no use for a lossless logo.
     let jpeg = super::images::encode_jpeg_for_pdf(&decoded, 86, false)?;
-    Ok(doc.add_object(super::images::image_stream(
-        jpeg,
-        decoded.width(),
-        decoded.height(),
-        false,
-    )))
+    Ok(doc.add_object(super::images::image_stream(jpeg, decoded.width(), decoded.height(), false)))
 }
 
 #[cfg(test)]
@@ -343,10 +338,8 @@ mod tests {
     #[test]
     fn brackets_and_backslashes_cannot_break_the_stream() {
         let src = testkit::pdf_scan(1, 200, 260, 70);
-        let options = WatermarkOptions {
-            mark: Mark::Text(r"(c) 2026 \ ACME".into()),
-            ..Default::default()
-        };
+        let options =
+            WatermarkOptions { mark: Mark::Text(r"(c) 2026 \ ACME".into()), ..Default::default() };
         let out = watermark(&src, None, &options).unwrap();
         let content = text_of(&out);
         assert!(content.contains(r"\(c\) 2026 \\ ACME"), "{content}");

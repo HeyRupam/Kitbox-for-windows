@@ -117,8 +117,7 @@ fn parse_page(text: &str, total: u32, default: u32) -> Result<u32> {
     if text == "last" || text == "n" {
         return Ok(total);
     }
-    text.parse::<u32>()
-        .map_err(|_| Error::invalid(format!("'{text}' is not a page number")))
+    text.parse::<u32>().map_err(|_| Error::invalid(format!("'{text}' is not a page number")))
 }
 
 /// What a page looks like, without rendering it.
@@ -241,11 +240,7 @@ pub struct ExportedPage {
 /// impossible for pages built from text and vectors. Those come back with a
 /// reason rather than a blank image, because handing someone an empty JPEG and
 /// calling it a conversion is worse than saying no.
-pub fn export_pages(
-    bytes: &[u8],
-    max_px: Option<u32>,
-    quality: u8,
-) -> Result<Vec<ExportedPage>> {
+pub fn export_pages(bytes: &[u8], max_px: Option<u32>, quality: u8) -> Result<Vec<ExportedPage>> {
     let doc = load(bytes)?;
     let page_ids: Vec<ObjectId> = doc.page_iter().collect();
 
@@ -425,8 +420,8 @@ pub fn rebuild_ops(bytes: &[u8], ops: &[PageOp]) -> Result<(Vec<u8>, PageOpRepor
         }
     }
 
-    let changed = ops.len() as u32 != before
-        || ops.iter().enumerate().any(|(i, o)| o.page != i as u32 + 1);
+    let changed =
+        ops.len() as u32 != before || ops.iter().enumerate().any(|(i, o)| o.page != i as u32 + 1);
     let rotated = ops.iter().any(|o| o.rotate != 0);
     let mut dropped = Vec::new();
     if changed || rotated {

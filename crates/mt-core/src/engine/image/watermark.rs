@@ -113,11 +113,8 @@ pub fn watermark(
 
     let stamp = build_stamp(mark, options)?;
     let stamp = fit_to_width(&stamp, (base.width() as f32 * options.scale) as u32);
-    let stamp = if options.rotation.abs() > 0.01 {
-        rotate_rgba(&stamp, options.rotation)
-    } else {
-        stamp
-    };
+    let stamp =
+        if options.rotation.abs() > 0.01 { rotate_rgba(&stamp, options.rotation) } else { stamp };
 
     let mut canvas = base.to_rgba8();
     composite(&mut canvas, &stamp, options);
@@ -203,8 +200,9 @@ fn fit_to_width(stamp: &RgbaImage, target_width: u32) -> RgbaImage {
     if stamp.width() == target_width {
         return stamp.clone();
     }
-    let height =
-        ((stamp.height() as f32 * target_width as f32 / stamp.width() as f32).round() as u32).max(1);
+    let height = ((stamp.height() as f32 * target_width as f32 / stamp.width() as f32).round()
+        as u32)
+        .max(1);
     image::imageops::resize(stamp, target_width, height, image::imageops::FilterType::Lanczos3)
 }
 
@@ -406,11 +404,7 @@ mod tests {
 
         let before = decode(&base);
         let after = decode(&out);
-        let differing = before
-            .pixels()
-            .zip(after.pixels())
-            .filter(|(a, b)| a != b)
-            .count();
+        let differing = before.pixels().zip(after.pixels()).filter(|(a, b)| a != b).count();
         assert!(differing > 500, "text should mark a good number of pixels, got {differing}");
     }
 
@@ -525,9 +519,8 @@ mod tests {
     fn a_font_that_is_not_a_font_says_so() {
         let base = photo(100, 100);
         let mark = ImageMark::Text { text: "hello".into(), font: b"not a font".to_vec() };
-        let err = watermark(&base, &mark, &ImageWatermarkOptions::default())
-            .unwrap_err()
-            .to_string();
+        let err =
+            watermark(&base, &mark, &ImageWatermarkOptions::default()).unwrap_err().to_string();
         assert!(err.contains("font"), "{err}");
     }
 }

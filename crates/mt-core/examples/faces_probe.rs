@@ -33,12 +33,16 @@ fn main() {
             for t in 0..3u32 {
                 for x in f.x..(f.x + f.width).min(rgb.width()) {
                     for y in [f.y + t, (f.y + f.height).saturating_sub(t).min(rgb.height() - 1)] {
-                        if y < rgb.height() { rgb.put_pixel(x, y, image::Rgb([255, 60, 0])); }
+                        if y < rgb.height() {
+                            rgb.put_pixel(x, y, image::Rgb([255, 60, 0]));
+                        }
                     }
                 }
                 for y in f.y..(f.y + f.height).min(rgb.height()) {
                     for x in [f.x + t, (f.x + f.width).saturating_sub(t).min(rgb.width() - 1)] {
-                        if x < rgb.width() { rgb.put_pixel(x, y, image::Rgb([255, 60, 0])); }
+                        if x < rgb.width() {
+                            rgb.put_pixel(x, y, image::Rgb([255, 60, 0]));
+                        }
                     }
                 }
             }

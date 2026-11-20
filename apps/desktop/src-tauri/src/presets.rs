@@ -194,9 +194,8 @@ fn read_yours(dir: &Path) -> Result<Vec<Preset>, String> {
     }
     // Refusing to write over a file we can't parse: someone's edit is in
     // there, and overwriting it to save one preset would lose the lot.
-    Preset::parse_all(&text).map_err(|e| {
-        format!("{YOURS} has to be fixed before Kitbox can change it: {e}")
-    })
+    Preset::parse_all(&text)
+        .map_err(|e| format!("{YOURS} has to be fixed before Kitbox can change it: {e}"))
 }
 
 fn write_yours(dir: &Path, presets: &[Preset]) -> Result<(), String> {
@@ -222,9 +221,8 @@ fn read_text(path: &Path) -> Result<String, String> {
         }
         [0xFF, 0xFE, rest @ ..] => decode_utf16(rest, u16::from_le_bytes),
         [0xFE, 0xFF, rest @ ..] => decode_utf16(rest, u16::from_be_bytes),
-        _ => String::from_utf8(bytes).map_err(|e| {
-            format!("this file isn't text Kitbox can read ({e}); save it as UTF-8")
-        }),
+        _ => String::from_utf8(bytes)
+            .map_err(|e| format!("this file isn't text Kitbox can read ({e}); save it as UTF-8")),
     }
 }
 
@@ -232,8 +230,7 @@ fn decode_utf16(bytes: &[u8], order: fn([u8; 2]) -> u16) -> Result<String, Strin
     if bytes.len() % 2 != 0 {
         return Err("this file looks like UTF-16 but ends mid-character".into());
     }
-    let units: Vec<u16> =
-        bytes.chunks_exact(2).map(|pair| order([pair[0], pair[1]])).collect();
+    let units: Vec<u16> = bytes.chunks_exact(2).map(|pair| order([pair[0], pair[1]])).collect();
     String::from_utf16(&units).map_err(|e| e.to_string())
 }
 

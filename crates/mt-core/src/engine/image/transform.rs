@@ -180,8 +180,7 @@ fn apply_resize(image: &DynamicImage, mode: ResizeMode) -> Result<DynamicImage> 
             // Cover the box, then take the middle: no distortion, no letterbox.
             let scale = (width as f32 / w as f32).max(height as f32 / h as f32);
             let (sw, sh) = scaled(w, h, scale);
-            let covered =
-                image.resize_exact(sw.max(width), sh.max(height), FilterType::Lanczos3);
+            let covered = image.resize_exact(sw.max(width), sh.max(height), FilterType::Lanczos3);
             covered.crop_imm(
                 (covered.width() - width) / 2,
                 (covered.height() - height) / 2,
@@ -283,7 +282,9 @@ mod tests {
             (400, 200)
         );
         assert_eq!(
-            dims(&resize(&src, ResizeMode::LongestEdge(200), &TransformOptions::default()).unwrap()),
+            dims(
+                &resize(&src, ResizeMode::LongestEdge(200), &TransformOptions::default()).unwrap()
+            ),
             (200, 100)
         );
     }
@@ -306,12 +307,9 @@ mod tests {
     #[test]
     fn crops_a_rectangle() {
         let src = photo(400, 300);
-        let out = crop(
-            &src,
-            Rect { x: 50, y: 20, width: 100, height: 80 },
-            &TransformOptions::default(),
-        )
-        .unwrap();
+        let out =
+            crop(&src, Rect { x: 50, y: 20, width: 100, height: 80 }, &TransformOptions::default())
+                .unwrap();
         assert_eq!(dims(&out), (100, 80));
     }
 
@@ -348,9 +346,18 @@ mod tests {
     #[test]
     fn rotation_swaps_the_sides() {
         let src = photo(400, 300);
-        assert_eq!(dims(&rotate(&src, 90, Flip::None, &TransformOptions::default()).unwrap()), (300, 400));
-        assert_eq!(dims(&rotate(&src, 180, Flip::None, &TransformOptions::default()).unwrap()), (400, 300));
-        assert_eq!(dims(&rotate(&src, -90, Flip::None, &TransformOptions::default()).unwrap()), (300, 400));
+        assert_eq!(
+            dims(&rotate(&src, 90, Flip::None, &TransformOptions::default()).unwrap()),
+            (300, 400)
+        );
+        assert_eq!(
+            dims(&rotate(&src, 180, Flip::None, &TransformOptions::default()).unwrap()),
+            (400, 300)
+        );
+        assert_eq!(
+            dims(&rotate(&src, -90, Flip::None, &TransformOptions::default()).unwrap()),
+            (300, 400)
+        );
         assert!(rotate(&src, 45, Flip::None, &TransformOptions::default()).is_err());
     }
 
@@ -368,17 +375,13 @@ mod tests {
     #[test]
     fn converts_between_formats() {
         let src = photo(200, 150);
-        let png = convert(
-            &src,
-            &TransformOptions { format: OutputFormat::Png, ..Default::default() },
-        )
-        .unwrap();
+        let png =
+            convert(&src, &TransformOptions { format: OutputFormat::Png, ..Default::default() })
+                .unwrap();
         assert_eq!(FileKind::sniff(&png), FileKind::Png);
-        let back = convert(
-            &png,
-            &TransformOptions { format: OutputFormat::Jpeg, ..Default::default() },
-        )
-        .unwrap();
+        let back =
+            convert(&png, &TransformOptions { format: OutputFormat::Jpeg, ..Default::default() })
+                .unwrap();
         assert_eq!(FileKind::sniff(&back), FileKind::Jpeg);
         assert_eq!(dims(&back), (200, 150));
     }

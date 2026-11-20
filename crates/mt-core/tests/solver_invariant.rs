@@ -160,18 +160,12 @@ fn sweep(cases: u32, seed: u64) {
         }
 
         // Whatever happened, what comes back has to be a usable file.
-        assert!(
-            !outcome.bytes().is_empty(),
-            "{what}: produced nothing at all (case {case})"
-        );
+        assert!(!outcome.bytes().is_empty(), "{what}: produced nothing at all (case {case})");
     }
 
     println!("{cases} pairs: {hits} hit, {padded} padded into range, {refused} honestly refused");
     // Proportions rather than counts, so the two sweeps hold the same line.
-    assert!(
-        hits * 2 > cases,
-        "only {hits} of {cases} landed inside — the solver has got worse"
-    );
+    assert!(hits * 2 > cases, "only {hits} of {cases} landed inside — the solver has got worse");
     assert!(
         refused > 0 || cases < 50,
         "no impossible target was refused; the test has stopped testing that"
@@ -206,7 +200,9 @@ fn the_same_invariant_holds_for_documents() {
             Bias::Balanced,
             PdfCompressOptions { strip_metadata: true, ..Default::default() },
         )
-        .unwrap_or_else(|e| panic!("{}: {e}", describe("scan", seed, pdf.len(), target, Bias::Balanced)));
+        .unwrap_or_else(|e| {
+            panic!("{}: {e}", describe("scan", seed, pdf.len(), target, Bias::Balanced))
+        });
 
         let what = describe("scan", seed, pdf.len(), target, Bias::Balanced);
         if let Some(solved) = outcome.solved() {

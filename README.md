@@ -7,6 +7,36 @@ The feature it exists for: **compress to a size, not a guess.** Type the range a
 form demands — "between 50 and 100 KB" — and Kitbox encodes the file repeatedly
 until the result lands inside it, then tells you exactly what that cost.
 
+## Getting it
+
+**Using it rather than building it?** [USING.md](USING.md) is the short guide:
+the form-photo job, the three ways to work without opening the app, and what
+Kitbox will tell you rather than fake.
+
+Windows only. The desktop shell talks to WebView2 and the Windows registry;
+the engine underneath is portable, which is what the Android port would reuse.
+
+You need [Rust](https://rustup.rs) 1.85 or newer, [Node](https://nodejs.org) 22
+or newer, and the WebView2 runtime (already on Windows 11, and a small download
+on Windows 10).
+
+```bash
+npm install && npm --prefix ui install
+```
+
+```bash
+npm run app
+```
+
+That builds the engine and opens the window. To make an installer instead:
+
+```bash
+npm run app:build
+```
+
+which writes `target/release/bundle/nsis/Kitbox_<version>_x64-setup.exe` — a
+per-user install needing no administrator.
+
 ## What works today
 
 All 39 tools are built. Every one is in the app, on the command line, and
@@ -113,7 +143,7 @@ npm run app:build
 ```
 
 produces `target/release/bundle/nsis/Kitbox_<version>_x64-setup.exe` — about
-7.5 MB, a per-user install needing no administrator.
+8.7 MB, a per-user install needing no administrator.
 
 The first run of this downloads NSIS and one helper DLL from the Tauri
 project's own releases, verifies their hashes and caches them. That is build
@@ -1556,3 +1586,17 @@ cargo test && npm --prefix ui run typecheck
 The load-bearing test is `never_returns_an_out_of_range_success`: across a
 spread of ladders and targets, a successful result is always inside the
 requested range. Everything else in the app rests on that.
+
+## Where this stands
+
+Finished, and not under active development. It was built to solve one person's
+problem — forms that demand a photograph between 20 and 50 KB — and it does
+that, along with everything else on the list above. The tests, the benchmark
+and the honest-refusal habits are there so that anyone picking it up later,
+including its author, can tell what it actually does rather than what it was
+meant to do.
+
+Issues and pull requests may go unanswered. Forking is expected rather than
+resented.
+
+MIT licensed. See [LICENSE](LICENSE).

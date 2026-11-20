@@ -113,14 +113,7 @@ pub fn crop(
                 // Percentages are of the *displayed* edge, which swaps on a
                 // quarter-turned page.
                 let (dw, dh) = if rotation.rem_euclid(180) == 90 { (h, w) } else { (w, h) };
-                apply_margins(
-                    media,
-                    rotation,
-                    top * dh,
-                    right * dw,
-                    bottom * dh,
-                    left * dw,
-                )
+                apply_margins(media, rotation, top * dh, right * dw, bottom * dh, left * dw)
             }
             CropSpec::Auto { padding } => match content_rect(&doc, *page_id) {
                 Some(content) => pad_and_clamp(content, media, *padding),
@@ -197,12 +190,8 @@ fn apply_margins(
         _ => (left, right, bottom, top),
     };
 
-    let rect = (
-        media.0 + page_left,
-        media.1 + page_bottom,
-        media.2 - page_right,
-        media.3 - page_top,
-    );
+    let rect =
+        (media.0 + page_left, media.1 + page_bottom, media.2 - page_right, media.3 - page_top);
     sane(rect, media)
 }
 
@@ -221,16 +210,9 @@ fn pad_and_clamp(
 }
 
 /// A crop box has to sit inside the page and still have area.
-fn sane(
-    rect: (f32, f32, f32, f32),
-    media: (f32, f32, f32, f32),
-) -> Option<(f32, f32, f32, f32)> {
-    let clamped = (
-        rect.0.max(media.0),
-        rect.1.max(media.1),
-        rect.2.min(media.2),
-        rect.3.min(media.3),
-    );
+fn sane(rect: (f32, f32, f32, f32), media: (f32, f32, f32, f32)) -> Option<(f32, f32, f32, f32)> {
+    let clamped =
+        (rect.0.max(media.0), rect.1.max(media.1), rect.2.min(media.2), rect.3.min(media.3));
     if clamped.2 - clamped.0 < 1.0 || clamped.3 - clamped.1 < 1.0 {
         return None;
     }
@@ -484,8 +466,12 @@ mod tests {
         assert_eq!(report.skipped, vec![1]);
         assert!(crop_box(&out, 0).is_none());
 
-        assert!(crop(&src, None, &CropSpec::Margins { top: -1.0, right: 0.0, bottom: 0.0, left: 0.0 })
-            .is_err());
+        assert!(crop(
+            &src,
+            None,
+            &CropSpec::Margins { top: -1.0, right: 0.0, bottom: 0.0, left: 0.0 }
+        )
+        .is_err());
         assert!(crop(
             &src,
             None,

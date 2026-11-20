@@ -11,11 +11,19 @@ fn main() {
 
     for id in model.input_ids() {
         let info = model.node_info(*id);
-        println!("input  {:?} {:?}", info.as_ref().and_then(|i| i.name()), info.as_ref().and_then(|i| i.shape()));
+        println!(
+            "input  {:?} {:?}",
+            info.as_ref().and_then(|i| i.name()),
+            info.as_ref().and_then(|i| i.shape())
+        );
     }
     for id in model.output_ids() {
         let info = model.node_info(*id);
-        println!("output {:?} {:?}", info.as_ref().and_then(|i| i.name()), info.as_ref().and_then(|i| i.shape()));
+        println!(
+            "output {:?} {:?}",
+            info.as_ref().and_then(|i| i.name()),
+            info.as_ref().and_then(|i| i.shape())
+        );
     }
 
     const W: usize = 320;
@@ -47,7 +55,8 @@ fn main() {
                         continue;
                     }
                 };
-                let (lo, hi) = t.iter().fold((f32::MAX, f32::MIN), |(l, h), x| (l.min(*x), h.max(*x)));
+                let (lo, hi) =
+                    t.iter().fold((f32::MAX, f32::MIN), |(l, h), x| (l.min(*x), h.max(*x)));
                 println!("  output {i}: shape {:?} range {lo:.3}..{hi:.3}", t.shape());
                 // If this looks like scores, how many are confident?
                 if t.shape()[2] == 2 {

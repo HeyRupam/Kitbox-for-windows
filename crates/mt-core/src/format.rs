@@ -36,7 +36,8 @@ impl FileKind {
         if b.len() >= 2 && &b[..2] == b"BM" {
             return FileKind::Bmp;
         }
-        if b.len() >= 4 && (b[..4] == [0x49, 0x49, 0x2A, 0x00] || b[..4] == [0x4D, 0x4D, 0x00, 0x2A])
+        if b.len() >= 4
+            && (b[..4] == [0x49, 0x49, 0x2A, 0x00] || b[..4] == [0x4D, 0x4D, 0x00, 0x2A])
         {
             return FileKind::Tiff;
         }

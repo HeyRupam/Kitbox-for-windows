@@ -122,9 +122,8 @@ pub fn install(exe: &Path) -> Result<(), String> {
 
             for item in items.iter() {
                 let path = format!("{}\\shell\\{:02}{}", shell_path(extension), item.order, KEY);
-                let (entry, _) = hkcu
-                    .create_subkey_with_flags(&path, KEY_WRITE)
-                    .map_err(|e| e.to_string())?;
+                let (entry, _) =
+                    hkcu.create_subkey_with_flags(&path, KEY_WRITE).map_err(|e| e.to_string())?;
                 entry.set_value("MUIVerb", &item.label).map_err(|e| e.to_string())?;
 
                 let (command, _) = hkcu
@@ -269,7 +268,9 @@ mod tests {
         // A verb with nothing to act on is not a job.
         assert!(parse(&["x".into(), "--shell".into(), "open".into()]).is_none());
         // And a verb this build doesn't know is ignored rather than guessed at.
-        assert!(parse(&["x".into(), "--shell".into(), "frobnicate".into(), "a.jpg".into()]).is_none());
+        assert!(
+            parse(&["x".into(), "--shell".into(), "frobnicate".into(), "a.jpg".into()]).is_none()
+        );
     }
 
     #[test]

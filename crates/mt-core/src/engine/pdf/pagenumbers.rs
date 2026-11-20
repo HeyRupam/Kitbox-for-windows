@@ -9,7 +9,9 @@
 use lopdf::{Document, ObjectId};
 use serde::{Deserialize, Serialize};
 
-use super::overlay::{escape_text, rotation_of, stamp_page, text_width, Frame, FONT_NAME, STATE_NAME};
+use super::overlay::{
+    escape_text, rotation_of, stamp_page, text_width, Frame, FONT_NAME, STATE_NAME,
+};
 use super::pages::{materialise_inherited, media_box, PageSelection};
 use crate::error::{Error, Result};
 
@@ -85,9 +87,7 @@ pub fn add_page_numbers(
     let numbered: Vec<(usize, ObjectId)> = page_ids
         .iter()
         .enumerate()
-        .filter(|(index, _)| {
-            selection.map(|s| s.contains(*index as u32 + 1)).unwrap_or(true)
-        })
+        .filter(|(index, _)| selection.map(|s| s.contains(*index as u32 + 1)).unwrap_or(true))
         .map(|(index, id)| (index, *id))
         .collect();
 
@@ -170,10 +170,8 @@ mod tests {
     #[test]
     fn the_template_fills_in_both_placeholders() {
         let src = testkit::pdf_scan(4, 200, 260, 70);
-        let options = PageNumberOptions {
-            template: "Page {n} of {total}".into(),
-            ..Default::default()
-        };
+        let options =
+            PageNumberOptions { template: "Page {n} of {total}".into(), ..Default::default() };
         let (out, _) = add_page_numbers(&src, None, &options).unwrap();
         let pages = contents(&out);
         assert!(pages[0].contains("(Page 1 of 4) Tj"), "{}", pages[0]);
@@ -184,8 +182,7 @@ mod tests {
     fn skipping_the_cover_still_starts_at_one() {
         let src = testkit::pdf_scan(4, 200, 260, 70);
         let selection = PageSelection::parse("2-4", 4).unwrap();
-        let options =
-            PageNumberOptions { template: "{n} of {total}".into(), ..Default::default() };
+        let options = PageNumberOptions { template: "{n} of {total}".into(), ..Default::default() };
         let (out, total) = add_page_numbers(&src, Some(&selection), &options).unwrap();
 
         assert_eq!(total, 3, "the total counts the pages actually numbered");

@@ -274,21 +274,13 @@ fn read_image(
 
     let source = ImageSource::from_bytes(rgb.as_raw(), rgb.dimensions())
         .map_err(|e| Error::other(format!("{e}")))?;
-    let input = models
-        .engine
-        .prepare_input(source)
-        .map_err(|e| Error::other(format!("{e}")))?;
+    let input = models.engine.prepare_input(source).map_err(|e| Error::other(format!("{e}")))?;
     let words = models.engine.detect_words(&input).map_err(|e| Error::other(format!("{e}")))?;
     let lines = models.engine.find_text_lines(&input, &words);
-    let recognised = models
-        .engine
-        .recognize_text(&input, &lines)
-        .map_err(|e| Error::other(format!("{e}")))?;
+    let recognised =
+        models.engine.recognize_text(&input, &lines).map_err(|e| Error::other(format!("{e}")))?;
 
-    Ok((
-        recognised.into_iter().flatten().collect(),
-        (rgb.width() as f32, rgb.height() as f32),
-    ))
+    Ok((recognised.into_iter().flatten().collect(), (rgb.width() as f32, rgb.height() as f32)))
 }
 
 /// Map each word from image pixels onto the page, and join the text.
@@ -388,12 +380,7 @@ mod tests {
             .enumerate()
             .map(|(i, char)| TextChar {
                 char,
-                rect: Rect::from_tlhw(
-                    top,
-                    left + i as i32 * char_width,
-                    height,
-                    char_width,
-                ),
+                rect: Rect::from_tlhw(top, left + i as i32 * char_width, height, char_width),
             })
             .collect();
         TextLine::new(chars)
@@ -478,14 +465,8 @@ mod tests {
 
     #[test]
     fn a_word_with_no_size_is_skipped_rather_than_dividing_by_zero() {
-        let words = vec![Word {
-            text: "ghost".into(),
-            x: 0.0,
-            y: 0.0,
-            width: 0.0,
-            height: 0.0,
-            line: 0,
-        }];
+        let words =
+            vec![Word { text: "ghost".into(), x: 0.0, y: 0.0, width: 0.0, height: 0.0, line: 0 }];
         let layer = invisible_layer(&words);
         assert!(!layer.contains("ghost"), "{layer}");
     }
@@ -548,15 +529,13 @@ mod tests {
         // No models needed: the skip happens before the engine is asked.
         let doc_bytes = testkit::pdf_with_sized_text(&[(12.0, "already words")]);
         let mut doc = Document::load_mem(&doc_bytes).unwrap();
-        assert!(
-            Models::load(Vec::new(), Vec::new()).is_err(),
-            "empty bytes are not a model"
-        );
+        assert!(Models::load(Vec::new(), Vec::new()).is_err(), "empty bytes are not a model");
 
         // Reach the same decision the engine path would.
         let page_id = doc.page_iter().next().unwrap();
         super::super::pages::materialise_inherited(&mut doc, page_id);
-        let has_text = !super::super::markdown::page_lines(&doc, page_id).join("").trim().is_empty();
+        let has_text =
+            !super::super::markdown::page_lines(&doc, page_id).join("").trim().is_empty();
         assert!(has_text, "the fixture should carry text");
     }
 

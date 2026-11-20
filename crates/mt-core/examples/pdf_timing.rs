@@ -34,16 +34,16 @@ fn main() {
         solved.probes,
         solved.size
     );
-    println!(
-        "per probe:        {:>7} ms\n",
-        whole.as_millis() / solved.probes.max(1) as u128
-    );
+    println!("per probe:        {:>7} ms\n", whole.as_millis() / solved.probes.max(1) as u128);
 
     // Now the pieces, each timed on its own.
     let built = Instant::now();
-    let compressor = pdf::PdfCompressor::new(&scan, PdfCompressOptions::default())
-        .expect("a compressor");
-    println!("opening it:       {:>7} ms   (load, inspect, lossless pass)", built.elapsed().as_millis());
+    let compressor =
+        pdf::PdfCompressor::new(&scan, PdfCompressOptions::default()).expect("a compressor");
+    println!(
+        "opening it:       {:>7} ms   (load, inspect, lossless pass)",
+        built.elapsed().as_millis()
+    );
 
     let knob = pdf::PdfKnob { lossless_only: false, dpi: 150, quality: 60, grayscale: false };
 

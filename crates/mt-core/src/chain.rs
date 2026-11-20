@@ -29,12 +29,19 @@ use crate::{Bias, Error, Outcome, Result, SizeTarget};
 #[serde(tag = "step", rename_all = "snake_case", rename_all_fields = "camelCase")]
 pub enum Step {
     /// Cap the longest edge.
-    Resize { longest: u32 },
+    Resize {
+        longest: u32,
+    },
     /// Exactly these pixels, by covering the box and trimming the overflow —
     /// how a form photo gets to 200 × 230 without being squashed.
-    Fit { width: u32, height: u32 },
+    Fit {
+        width: u32,
+        height: u32,
+    },
     /// Trim to a shape, keeping the middle.
-    Aspect { ratio: f32 },
+    Aspect {
+        ratio: f32,
+    },
     Rotate {
         degrees: i32,
         #[serde(default)]
@@ -47,7 +54,9 @@ pub enum Step {
         #[serde(default)]
         options: ImageWatermarkOptions,
     },
-    Convert { format: OutputFormat },
+    Convert {
+        format: OutputFormat,
+    },
     /// Land inside a size. Always the last step.
     Compress {
         target: SizeTarget,
@@ -189,11 +198,9 @@ pub fn apply(bytes: &[u8], chain: &Chain, font: Option<&[u8]>) -> Result<Applied
     for step in &chain.steps {
         let before = current.len() as u64;
         current = match step {
-            Step::Resize { longest } => image::resize(
-                &current,
-                ResizeMode::LongestEdge(*longest),
-                &keep_format(&current),
-            )?,
+            Step::Resize { longest } => {
+                image::resize(&current, ResizeMode::LongestEdge(*longest), &keep_format(&current))?
+            }
             Step::Fit { width, height } => image::resize(
                 &current,
                 ResizeMode::Fill { width: *width, height: *height },
@@ -338,9 +345,8 @@ mod tests {
         let photo = testkit::encode_jpeg(&testkit::photo(3000, 2000), 95);
         let done = apply(&photo, &form_photo(), None).expect("a run");
 
-        let (w, h) = ::image::load_from_memory(&done.bytes)
-            .map(|i| (i.width(), i.height()))
-            .unwrap();
+        let (w, h) =
+            ::image::load_from_memory(&done.bytes).map(|i| (i.width(), i.height())).unwrap();
         assert_eq!((w, h), (200, 230), "the fit step decides the pixels");
         assert!(
             (20_000..=50_000).contains(&(done.bytes.len() as u64)),
@@ -469,11 +475,7 @@ mod tests {
         let done = apply(&photo, &chain, None).expect("a run");
 
         assert!(done.bytes.len() >= 60_000, "{} bytes", done.bytes.len());
-        assert!(
-            done.steps.last().unwrap().contains("padded"),
-            "{:?}",
-            done.steps
-        );
+        assert!(done.steps.last().unwrap().contains("padded"), "{:?}", done.steps);
     }
 
     #[test]
@@ -527,7 +529,10 @@ mod tests {
         let chain = Chain {
             id: "png".into(),
             name: "Keep PNG".into(),
-            steps: vec![Step::Resize { longest: 300 }, Step::Rotate { degrees: 90, flip: Flip::None }],
+            steps: vec![
+                Step::Resize { longest: 300 },
+                Step::Rotate { degrees: 90, flip: Flip::None },
+            ],
             note: None,
         };
         let done = apply(&png, &chain, None).expect("a run");

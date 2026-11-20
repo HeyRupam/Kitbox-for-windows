@@ -169,11 +169,8 @@ pub fn apply(source: &DynamicImage, options: &AdjustOptions) -> (DynamicImage, A
 
     let mut out = RgbImage::new(w, h);
     for (x, y, pixel) in working.enumerate_pixels() {
-        let mut v = [
-            pixel.0[0] as f32 / 255.0,
-            pixel.0[1] as f32 / 255.0,
-            pixel.0[2] as f32 / 255.0,
-        ];
+        let mut v =
+            [pixel.0[0] as f32 / 255.0, pixel.0[1] as f32 / 255.0, pixel.0[2] as f32 / 255.0];
 
         // Levels are already in `working`; the colour correction is read from
         // that and applied here.
@@ -225,11 +222,7 @@ pub fn apply(source: &DynamicImage, options: &AdjustOptions) -> (DynamicImage, A
             v = [luma, luma, luma];
         }
 
-        out.put_pixel(
-            x,
-            y,
-            image::Rgb([to_byte(v[0]), to_byte(v[1]), to_byte(v[2])]),
-        );
+        out.put_pixel(x, y, image::Rgb([to_byte(v[0]), to_byte(v[1]), to_byte(v[2])]));
     }
 
     // 7. Sharpening last, so it works on the picture as it will be seen
@@ -262,13 +255,7 @@ pub fn apply(source: &DynamicImage, options: &AdjustOptions) -> (DynamicImage, A
         );
     }
 
-    let report = AdjustReport {
-        width: w,
-        height: h,
-        levels,
-        colour_gain: gain,
-        warnings,
-    };
+    let report = AdjustReport { width: w, height: h, levels, colour_gain: gain, warnings };
     (finished, report)
 }
 
@@ -373,8 +360,8 @@ fn white_patch(rgb: &RgbImage) -> [f32; 3] {
             pixel.0[2] as f32 / 255.0,
         ]);
         if (v * 255.0) as u8 >= threshold {
-            for c in 0..3 {
-                totals[c] += pixel.0[c] as f64;
+            for (total, channel) in totals.iter_mut().zip(pixel.0) {
+                *total += channel as f64;
             }
             counted += 1;
         }
@@ -383,11 +370,8 @@ fn white_patch(rgb: &RgbImage) -> [f32; 3] {
         return [1.0, 1.0, 1.0];
     }
 
-    let means = [
-        totals[0] / counted as f64,
-        totals[1] / counted as f64,
-        totals[2] / counted as f64,
-    ];
+    let means =
+        [totals[0] / counted as f64, totals[1] / counted as f64, totals[2] / counted as f64];
     // Too dark to be a highlight at all — nothing reliable to read, so leave
     // the colour alone rather than invent a correction.
     if means.iter().all(|m| *m < 40.0) {
@@ -438,8 +422,8 @@ mod tests {
         let n = rgb.pixels().len() as f32;
         let mut total = [0f32; 3];
         for p in rgb.pixels() {
-            for c in 0..3 {
-                total[c] += p.0[c] as f32;
+            for (sum, channel) in total.iter_mut().zip(p.0) {
+                *sum += channel as f32;
             }
         }
         [total[0] / n, total[1] / n, total[2] / n]
@@ -447,10 +431,8 @@ mod tests {
 
     #[test]
     fn levels_stretch_a_flat_picture_onto_the_full_range() {
-        let (out, report) = apply(
-            &dim_and_yellow(),
-            &AdjustOptions { auto_levels: true, ..Default::default() },
-        );
+        let (out, report) =
+            apply(&dim_and_yellow(), &AdjustOptions { auto_levels: true, ..Default::default() });
         assert_eq!(report.levels.len(), 3);
         for (lo, hi) in &report.levels {
             assert!(hi > lo, "a channel needs a range: {lo}..{hi}");
@@ -463,17 +445,17 @@ mod tests {
 
     #[test]
     fn the_colour_of_the_light_is_read_from_the_brightest_part() {
-        let (out, report) = apply(
-            &dim_and_yellow(),
-            &AdjustOptions { auto_colour: true, ..Default::default() },
-        );
+        let (out, report) =
+            apply(&dim_and_yellow(), &AdjustOptions { auto_colour: true, ..Default::default() });
         let gain = report.colour_gain.expect("a gain");
         assert!(gain[2] > gain[0], "blue was crushed, so it should be lifted most: {gain:?}");
 
         // And the cast should be measurably smaller afterwards.
         let before = mean(&dim_and_yellow());
         let after = mean(&out);
-        let spread = |m: [f32; 3]| m.iter().cloned().fold(f32::MIN, f32::max) - m.iter().cloned().fold(f32::MAX, f32::min);
+        let spread = |m: [f32; 3]| {
+            m.iter().cloned().fold(f32::MIN, f32::max) - m.iter().cloned().fold(f32::MAX, f32::min)
+        };
         assert!(spread(after) < spread(before), "{before:?} -> {after:?}");
     }
 
@@ -498,10 +480,8 @@ mod tests {
 
     #[test]
     fn a_picture_with_no_highlight_is_left_alone_rather_than_guessed_at() {
-        let (_, report) = apply(
-            &flat([12, 10, 9]),
-            &AdjustOptions { auto_colour: true, ..Default::default() },
-        );
+        let (_, report) =
+            apply(&flat([12, 10, 9]), &AdjustOptions { auto_colour: true, ..Default::default() });
         assert_eq!(report.colour_gain, Some([1.0, 1.0, 1.0]));
     }
 
@@ -534,7 +514,8 @@ mod tests {
 
     #[test]
     fn saturation_at_its_lowest_is_grey() {
-        let (out, _) = apply(&flat([200, 60, 40]), &AdjustOptions { saturation: -1.0, ..Default::default() });
+        let (out, _) =
+            apply(&flat([200, 60, 40]), &AdjustOptions { saturation: -1.0, ..Default::default() });
         let p = out.to_rgb8().get_pixel(0, 0).0;
         assert!(p[0] == p[1] && p[1] == p[2], "should be neutral, got {p:?}");
     }
@@ -543,16 +524,18 @@ mod tests {
     fn greyscale_weights_the_channels_the_way_an_eye_does() {
         // A flat average would make pure green and pure blue the same shade,
         // and they are nothing alike to look at.
-        let green = apply(&flat([0, 255, 0]), &AdjustOptions { greyscale: true, ..Default::default() })
-            .0
-            .to_rgb8()
-            .get_pixel(0, 0)
-            .0[0];
-        let blue = apply(&flat([0, 0, 255]), &AdjustOptions { greyscale: true, ..Default::default() })
-            .0
-            .to_rgb8()
-            .get_pixel(0, 0)
-            .0[0];
+        let green =
+            apply(&flat([0, 255, 0]), &AdjustOptions { greyscale: true, ..Default::default() })
+                .0
+                .to_rgb8()
+                .get_pixel(0, 0)
+                .0[0];
+        let blue =
+            apply(&flat([0, 0, 255]), &AdjustOptions { greyscale: true, ..Default::default() })
+                .0
+                .to_rgb8()
+                .get_pixel(0, 0)
+                .0[0];
         assert!(green > blue + 80, "green reads far brighter than blue: {green} vs {blue}");
     }
 
@@ -581,7 +564,8 @@ mod tests {
 
     #[test]
     fn lifting_a_dark_picture_a_long_way_says_what_that_costs() {
-        let (_, report) = apply(&flat([40, 40, 40]), &AdjustOptions { exposure: 1.5, ..Default::default() });
+        let (_, report) =
+            apply(&flat([40, 40, 40]), &AdjustOptions { exposure: 1.5, ..Default::default() });
         assert!(
             report.warnings.iter().any(|w| w.contains("no hidden detail")),
             "{:?}",

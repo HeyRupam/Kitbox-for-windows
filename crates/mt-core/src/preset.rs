@@ -456,10 +456,9 @@ fn unwrap(outcome: Outcome) -> (Vec<u8>, Option<String>) {
         // Padding is filler added to clear a minimum the encoder could not
         // reach. It is lossless and it works, but a file that is part padding
         // is a surprising thing to hand someone without saying so.
-        Outcome::Padded(solved) => (
-            solved.bytes,
-            Some("padded with filler to clear the minimum the form asks for".into()),
-        ),
+        Outcome::Padded(solved) => {
+            (solved.bytes, Some("padded with filler to clear the minimum the form asks for".into()))
+        }
         Outcome::Infeasible { best, .. } => (best, None),
     }
 }
@@ -486,9 +485,9 @@ fn jfif_density(bytes: &[u8]) -> Option<u16> {
     let units = *bytes.get(at + 11)?;
     let x = u16::from_be_bytes([*bytes.get(at + 12)?, *bytes.get(at + 13)?]);
     match units {
-        1 => Some(x),                                     // already dots per inch
-        2 => Some((x as f32 * 2.54).round() as u16),      // dots per cm
-        _ => None,                                        // 0 means "aspect ratio only"
+        1 => Some(x),                                // already dots per inch
+        2 => Some((x as f32 * 2.54).round() as u16), // dots per cm
+        _ => None,                                   // 0 means "aspect ratio only"
     }
 }
 
@@ -681,7 +680,8 @@ mod tests {
         let bytes = testkit::encode_jpeg(&testkit::photo(1200, 1200), 95);
 
         let fixed = fix(&bytes, &preset, Bias::Balanced).expect("a fix");
-        let (w, h) = ::image::load_from_memory(&fixed.bytes).map(|i| (i.width(), i.height())).unwrap();
+        let (w, h) =
+            ::image::load_from_memory(&fixed.bytes).map(|i| (i.width(), i.height())).unwrap();
         assert!(w >= 350 && h >= 350, "{w}×{h} fell below the floor");
         assert!(fixed.report.fits, "{:?}", fixed.report.checks);
     }

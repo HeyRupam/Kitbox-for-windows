@@ -175,6 +175,7 @@ pub fn solve_with<E: Encodable>(
 
 /// Wrap up a chosen ladder index: pad it if it fell under the minimum, score it,
 /// and build the report.
+#[allow(clippy::too_many_arguments)]
 fn finish<E: Encodable>(
     enc: &E,
     p: &mut Prober<'_, E>,

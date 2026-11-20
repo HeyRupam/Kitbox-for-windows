@@ -106,12 +106,7 @@ pub fn to_markdown(bytes: &[u8], options: &MarkdownOptions) -> Result<(String, M
     }
 
     let markdown = tidy(&out);
-    let note = describe(
-        &scanned_pages,
-        &layout_pages,
-        pages_with_text,
-        page_ids.len() as u32,
-    );
+    let note = describe(&scanned_pages, &layout_pages, pages_with_text, page_ids.len() as u32);
 
     Ok((
         markdown.clone(),
@@ -278,13 +273,15 @@ fn extract_runs(doc: &Document, page_id: ObjectId) -> Vec<Run> {
                 line_matrix = text_matrix;
             }
             "Td" => {
-                let shift = Matrix([1.0, 0.0, 0.0, 1.0, number(&op.operands, 0), number(&op.operands, 1)]);
+                let shift =
+                    Matrix([1.0, 0.0, 0.0, 1.0, number(&op.operands, 0), number(&op.operands, 1)]);
                 line_matrix = shift.times(line_matrix);
                 text_matrix = line_matrix;
             }
             "TD" => {
                 leading = -number(&op.operands, 1);
-                let shift = Matrix([1.0, 0.0, 0.0, 1.0, number(&op.operands, 0), number(&op.operands, 1)]);
+                let shift =
+                    Matrix([1.0, 0.0, 0.0, 1.0, number(&op.operands, 0), number(&op.operands, 1)]);
                 line_matrix = shift.times(line_matrix);
                 text_matrix = line_matrix;
             }
@@ -384,10 +381,7 @@ fn push_run(
 /// Shared with the compare tool, which needs the same line grouping: diffing
 /// raw glyph runs would report a change every time a word wrapped.
 pub(super) fn page_lines(doc: &Document, page_id: ObjectId) -> Vec<String> {
-    group_into_lines(extract_runs(doc, page_id))
-        .into_iter()
-        .map(|line| line.text)
-        .collect()
+    group_into_lines(extract_runs(doc, page_id)).into_iter().map(|line| line.text).collect()
 }
 
 /* ---------- structure ---------- */
@@ -493,9 +487,8 @@ fn render(lines: &[Line], body_size: f32, options: &MarkdownOptions) -> String {
         let list = if options.detect_lists { list_marker(&line.text) } else { None };
 
         // A big vertical jump is a new block, whatever else is true.
-        let gap_break = previous
-            .map(|p| (p.y - line.y).abs() > line.size.max(p.size) * 1.75)
-            .unwrap_or(false);
+        let gap_break =
+            previous.map(|p| (p.y - line.y).abs() > line.size.max(p.size) * 1.75).unwrap_or(false);
 
         if heading.is_some() || list.is_some() || gap_break {
             flush(&mut out, &mut paragraph);
@@ -625,10 +618,7 @@ mod tests {
         assert_eq!(report.pages_with_text, 1);
         assert!(report.scanned_pages.is_empty());
         assert!(report.note.is_none());
-        assert!(
-            markdown.contains("Declaration"),
-            "the text should survive: {markdown:.200}"
-        );
+        assert!(markdown.contains("Declaration"), "the text should survive: {markdown:.200}");
         assert!(report.characters > 50);
     }
 
@@ -694,12 +684,9 @@ mod tests {
     fn page_breaks_are_optional() {
         let src = testkit::pdf_text_only();
         let without = to_markdown(&src, &MarkdownOptions::default()).unwrap().0;
-        let with = to_markdown(
-            &src,
-            &MarkdownOptions { page_breaks: true, ..Default::default() },
-        )
-        .unwrap()
-        .0;
+        let with = to_markdown(&src, &MarkdownOptions { page_breaks: true, ..Default::default() })
+            .unwrap()
+            .0;
         assert!(!without.contains("<!-- page"));
         assert!(with.contains("<!-- page 1 -->"), "{with:.120}");
     }

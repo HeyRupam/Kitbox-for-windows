@@ -10,6 +10,9 @@
 //! transformation matrix. That number drives the whole downsampling strategy:
 //! without it, "reduce to 150 DPI" is guesswork.
 
+/// Where each image sits on its page: left, bottom, right, top, in points.
+type Rects = std::collections::HashMap<lopdf::ObjectId, (f32, f32, f32, f32)>;
+
 use std::collections::{HashMap, HashSet};
 
 use lopdf::{Document, Object, ObjectId};
@@ -298,10 +301,7 @@ fn color_space_name(doc: &Document, stream: &lopdf::Stream) -> String {
     let cs = doc.dereference(cs).map(|(_, o)| o).unwrap_or(cs);
     match cs {
         Object::Name(n) => String::from_utf8_lossy(n).to_string(),
-        Object::Array(items) => items
-            .first()
-            .and_then(name_of)
-            .unwrap_or_else(|| "array".into()),
+        Object::Array(items) => items.first().and_then(name_of).unwrap_or_else(|| "array".into()),
         _ => "unknown".into(),
     }
 }
@@ -356,7 +356,7 @@ pub(super) fn drawn_rects(
 fn walk_placements(
     doc: &Document,
     pages: &[ObjectId],
-    mut rects: Option<&mut HashMap<ObjectId, (f32, f32, f32, f32)>>,
+    mut rects: Option<&mut Rects>,
 ) -> HashMap<ObjectId, (f32, f32)> {
     let mut out: HashMap<ObjectId, (f32, f32)> = HashMap::new();
 

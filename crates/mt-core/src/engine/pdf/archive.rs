@@ -250,7 +250,7 @@ fn unembedded_fonts(doc: &Document) -> Vec<String> {
                 .map(|n| String::from_utf8_lossy(n).to_string())
                 .unwrap_or_else(|| "an unnamed font".into());
 
-            if embedded(doc, &dict) {
+            if embedded(doc, dict) {
                 continue;
             }
             // The subset prefix is noise when naming the font to a person.
@@ -286,16 +286,14 @@ fn embedded(doc: &Document, font: &Dictionary) -> bool {
                 _ => Vec::new(),
             };
             list.iter()
-                .filter_map(|o| resolve(o))
+                .filter_map(&resolve)
                 .filter_map(|d| d.get(b"FontDescriptor").ok().and_then(resolve))
                 .collect()
         }
         Err(_) => font.get(b"FontDescriptor").ok().and_then(resolve).into_iter().collect(),
     };
 
-    descriptors.iter().any(|d| {
-        d.has(b"FontFile") || d.has(b"FontFile2") || d.has(b"FontFile3")
-    })
+    descriptors.iter().any(|d| d.has(b"FontFile") || d.has(b"FontFile2") || d.has(b"FontFile3"))
 }
 
 /// Whether anything paints in a colour space that means nothing on its own.
@@ -542,10 +540,7 @@ fn add_xmp(doc: &mut Document, options: &ArchiveOptions) -> Result<()> {
 }
 
 fn escape_xml(text: &str) -> String {
-    text.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
+    text.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
 }
 
 #[cfg(test)]
@@ -689,11 +684,7 @@ mod tests {
         doc.save_to(&mut bytes).unwrap();
 
         let (out, report) = to_archive(&bytes, &with_icc(Part::A2b)).unwrap();
-        assert!(
-            report.applied.iter().any(|a| a.contains("Removed")),
-            "{:?}",
-            report.applied
-        );
+        assert!(report.applied.iter().any(|a| a.contains("Removed")), "{:?}", report.applied);
         let after = Document::load_mem(&out).unwrap();
         let root = match after.trailer.get(b"Root").unwrap() {
             Object::Reference(id) => *id,

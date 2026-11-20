@@ -20,7 +20,9 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use lopdf::encryption::crypt_filters::{Aes128CryptFilter, Aes256CryptFilter, CryptFilter};
-use lopdf::{Document, EncryptionState, EncryptionVersion, LoadOptions, Object, Permissions, StringFormat};
+use lopdf::{
+    Document, EncryptionState, EncryptionVersion, LoadOptions, Object, Permissions, StringFormat,
+};
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 
@@ -357,7 +359,9 @@ mod tests {
 
     fn pages(bytes: &[u8], password: Option<&str>) -> usize {
         let doc = match password {
-            Some(p) => Document::load_mem_with_options(bytes, LoadOptions::with_password(p)).unwrap(),
+            Some(p) => {
+                Document::load_mem_with_options(bytes, LoadOptions::with_password(p)).unwrap()
+            }
             None => Document::load_mem(bytes).unwrap(),
         };
         doc.page_iter().count()
@@ -366,10 +370,8 @@ mod tests {
     #[test]
     fn protecting_then_unlocking_round_trips() {
         let src = plain();
-        let settings = Protection {
-            open_password: Some("correct horse".into()),
-            ..Default::default()
-        };
+        let settings =
+            Protection { open_password: Some("correct horse".into()), ..Default::default() };
         let locked = protect(&src, &settings).unwrap();
 
         let info = inspect_security(&locked).unwrap();
@@ -473,12 +475,10 @@ mod tests {
             &Protection { open_password: Some("a".into()), ..Default::default() },
         )
         .unwrap();
-        let err = protect(
-            &locked,
-            &Protection { open_password: Some("b".into()), ..Default::default() },
-        )
-        .unwrap_err()
-        .to_string();
+        let err =
+            protect(&locked, &Protection { open_password: Some("b".into()), ..Default::default() })
+                .unwrap_err()
+                .to_string();
         assert!(err.contains("already protected"), "{err}");
     }
 

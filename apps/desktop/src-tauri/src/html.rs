@@ -118,7 +118,6 @@ const LOAD_TIMEOUT: Duration = Duration::from_secs(45);
 /// How long WebView2 gets to produce the PDF once the page is ready.
 const PRINT_TIMEOUT: Duration = Duration::from_secs(60);
 
-
 /// Open the rendering window on `url` and wait until the page has settled.
 ///
 /// Shared by both outputs: the loading, the waiting and the timeout are the
@@ -216,7 +215,6 @@ pub struct Rendered {
     pub report: HtmlReport,
 }
 
-
 /// How a page is photographed.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -296,13 +294,18 @@ pub fn to_image(app: &AppHandle, source: &Source, setup: &ShotSetup) -> Result<S
                     ));
                 }
             }
-            Ok(_) => warnings.push("The page didn't report a height, so the window's own was used.".into()),
-            Err(e) => warnings.push(format!("Couldn't measure the page ({e}), so the window's own height was used.")),
+            Ok(_) => warnings
+                .push("The page didn't report a height, so the window's own was used.".into()),
+            Err(e) => warnings.push(format!(
+                "Couldn't measure the page ({e}), so the window's own height was used."
+            )),
         }
 
         if height != setup.height {
             // The capture sees the window, so the window has to be the page.
-            if let Err(e) = window.set_size(tauri::LogicalSize::new(setup.width as f64, height as f64)) {
+            if let Err(e) =
+                window.set_size(tauri::LogicalSize::new(setup.width as f64, height as f64))
+            {
                 warnings.push(format!("The window wouldn't resize ({e}), so the shot is short."));
                 height = setup.height;
             } else {
@@ -361,9 +364,8 @@ fn resolve(source: &Source, work: &std::path::Path) -> Result<(WebviewUrl, Strin
             Ok((WebviewUrl::External(file_url(&path)?), shown))
         }
         Source::Url(url) => {
-            let parsed: tauri::Url = url
-                .parse()
-                .map_err(|_| format!("'{url}' isn't a web address"))?;
+            let parsed: tauri::Url =
+                url.parse().map_err(|_| format!("'{url}' isn't a web address"))?;
             // http and https only: a file:// or custom scheme typed into the
             // address box is a way to reach things the user didn't mean to.
             if !matches!(parsed.scheme(), "http" | "https") {
@@ -412,16 +414,15 @@ fn print(
                 Err(e) => return report(Err(format!("no webview to print: {e}"))),
             };
 
-            let printable: ICoreWebView2_7 = match core.cast() {
-                Ok(v) => v,
-                Err(_) => {
-                    return report(Err(
+            let printable: ICoreWebView2_7 =
+                match core.cast() {
+                    Ok(v) => v,
+                    Err(_) => return report(Err(
                         "this version of WebView2 can't print to PDF — updating Microsoft Edge \
                          WebView2 should fix it"
                             .into(),
-                    ))
-                }
-            };
+                    )),
+                };
 
             // Print settings come from the environment, not the webview.
             let settings = (|| -> windows::core::Result<_> {
@@ -451,9 +452,7 @@ fn print(
                     .and_then(|_| settings.SetMarginRight(setup.margin))
                     .and_then(|_| settings.SetScaleFactor(setup.scale))
                     .and_then(|_| settings.SetShouldPrintBackgrounds(setup.backgrounds))
-                    .and_then(|_| {
-                        settings.SetShouldPrintHeaderAndFooter(setup.header_and_footer)
-                    })
+                    .and_then(|_| settings.SetShouldPrintHeaderAndFooter(setup.header_and_footer))
             };
             if let Err(e) = applied {
                 return report(Err(format!("those page settings were refused: {e}")));
@@ -482,10 +481,9 @@ fn print(
 
     match rx.recv_timeout(PRINT_TIMEOUT) {
         Ok(outcome) => outcome,
-        Err(_) => Err(format!(
-            "the renderer didn't finish within {} seconds",
-            PRINT_TIMEOUT.as_secs()
-        )),
+        Err(_) => {
+            Err(format!("the renderer didn't finish within {} seconds", PRINT_TIMEOUT.as_secs()))
+        }
     }
 }
 
@@ -500,7 +498,6 @@ fn print(
     // silent wrong answer.
     Err("rendering a page to PDF is only built for Windows so far".into())
 }
-
 
 /// Ask the page how tall it really is.
 ///
@@ -564,10 +561,11 @@ fn capture(
     output: &std::path::Path,
     png: bool,
 ) -> Result<(), String> {
-    use webview2_com::Microsoft::Web::WebView2::Win32::{
-        COREWEBVIEW2_CAPTURE_PREVIEW_IMAGE_FORMAT_JPEG, COREWEBVIEW2_CAPTURE_PREVIEW_IMAGE_FORMAT_PNG,
-    };
     use webview2_com::CapturePreviewCompletedHandler;
+    use webview2_com::Microsoft::Web::WebView2::Win32::{
+        COREWEBVIEW2_CAPTURE_PREVIEW_IMAGE_FORMAT_JPEG,
+        COREWEBVIEW2_CAPTURE_PREVIEW_IMAGE_FORMAT_PNG,
+    };
     use windows::core::HSTRING;
     use windows::Win32::System::Com::{STGM_CREATE, STGM_READWRITE};
     use windows::Win32::UI::Shell::SHCreateStreamOnFileEx;
@@ -589,13 +587,7 @@ fn capture(
             // be carried through memory twice.
             let wide = HSTRING::from(path.as_os_str());
             let stream = match unsafe {
-                SHCreateStreamOnFileEx(
-                    &wide,
-                    (STGM_CREATE | STGM_READWRITE).0,
-                    0,
-                    true,
-                    None,
-                )
+                SHCreateStreamOnFileEx(&wide, (STGM_CREATE | STGM_READWRITE).0, 0, true, None)
             } {
                 Ok(stream) => stream,
                 Err(e) => return report(Err(format!("could not open {}: {e}", path.display()))),
@@ -645,10 +637,7 @@ mod tests {
         // Checked before a window is opened, so these need no app handle.
         for width in [0u32, 10, 9000] {
             let setup = ShotSetup { width, ..Default::default() };
-            assert!(
-                !(200..=5_000).contains(&setup.width),
-                "{width} should be out of range"
-            );
+            assert!(!(200..=5_000).contains(&setup.width), "{width} should be out of range");
         }
         let tall = ShotSetup { height: 50_000, ..Default::default() };
         assert!(tall.height > MAX_SHOT_HEIGHT, "a window that tall is not drawn");
@@ -728,8 +717,7 @@ mod tests {
     #[test]
     fn pasted_html_is_written_somewhere_the_webview_can_open() {
         let dir = tempfile::tempdir().unwrap();
-        let (url, described) =
-            resolve(&Source::Html("<h1>hello</h1>".into()), dir.path()).unwrap();
+        let (url, described) = resolve(&Source::Html("<h1>hello</h1>".into()), dir.path()).unwrap();
         assert_eq!(described, "the pasted HTML");
         match url {
             WebviewUrl::External(url) => assert_eq!(url.scheme(), "file"),

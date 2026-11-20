@@ -49,13 +49,9 @@ pub fn stamp_page_with(
     extra_states: &[(String, Dictionary)],
 ) -> Result<()> {
     let open = doc.add_object(Stream::new(dictionary! {}, b"q\n".to_vec()));
-    let close =
-        doc.add_object(Stream::new(dictionary! {}, format!("Q\n{content}").into_bytes()));
+    let close = doc.add_object(Stream::new(dictionary! {}, format!("Q\n{content}").into_bytes()));
 
-    let page = doc
-        .get_dictionary(page_id)
-        .map_err(|_| Error::other("page disappeared"))?
-        .clone();
+    let page = doc.get_dictionary(page_id).map_err(|_| Error::other("page disappeared"))?.clone();
 
     let mut contents: Vec<Object> = match page.get(b"Contents") {
         Ok(Object::Reference(id)) => vec![Object::Reference(*id)],
@@ -114,8 +110,6 @@ pub fn sub_dictionary(doc: &Document, parent: &Dictionary, key: &[u8]) -> Dictio
         _ => Dictionary::new(),
     }
 }
-
-/// Escape the three characters a PDF literal string cannot carry raw.
 
 /* ---------- the page as the reader sees it ---------- */
 
@@ -176,6 +170,7 @@ pub fn rotation_of(doc: &Document, page_id: ObjectId) -> i32 {
         .unwrap_or(0) as i32
 }
 
+/// Escape the three characters a PDF literal string cannot carry raw.
 pub fn escape_text(text: &str) -> String {
     let mut out = String::with_capacity(text.len() + 8);
     for ch in text.chars() {
@@ -214,7 +209,8 @@ pub fn text_width(text: &str, font_size: f32) -> f32 {
 /// Readers supply the font, so these come from the specification rather than
 /// from measuring one.
 pub const HELVETICA_WIDTHS: [u16; 95] = [
-    278, 278, 355, 556, 556, 889, 667, 191, 333, 333, 389, 584, 278, 333, 278, 278, // space../
+    278, 278, 355, 556, 556, 889, 667, 191, 333, 333, 389, 584, 278, 333, 278,
+    278, // space../
     556, 556, 556, 556, 556, 556, 556, 556, 556, 556, 278, 278, 584, 584, 584, 556, // 0..?
     1015, 667, 667, 722, 722, 667, 611, 778, 722, 278, 500, 667, 556, 833, 722, 778, // @..O
     667, 778, 722, 667, 611, 722, 667, 944, 667, 667, 611, 278, 278, 278, 469, 556, // P.._

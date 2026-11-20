@@ -33,20 +33,6 @@ pub mod security;
 pub mod sign;
 pub mod watermark;
 
-pub use build::{images_to_pdf, ImagesToPdfOptions, Orientation, PageSize};
-pub use compress::{compress_to_target, PdfCompressOptions, PdfCompressor, PdfKnob};
-pub use inspect::{inspect, DocKind, ImageInfo, PdfReport};
-pub use lossless::{lossless_pass, LosslessStats};
-pub use markdown::{to_markdown, MarkdownOptions, MarkdownReport};
-pub use compare::{compare, Change, ChangeKind, CompareReport};
-pub use crop::{crop, CropReport, CropSpec};
-pub use pagenumbers::{add_page_numbers, NumberPosition, PageNumberOptions};
-pub use watermark::{
-    watermark, Mark, Placement, WatermarkOptions,
-};
-pub use sign::{
-    sign, Caption, SignOptions, SignReport, SignatureSpot, NOT_CRYPTOGRAPHIC,
-};
 pub use annotate::{
     annotate, AnnotateOptions, AnnotateReport, Annotation, Mark as AnnotationMark,
     PART_OF_THE_PAGE, WHITEOUT_COVERS,
@@ -55,20 +41,29 @@ pub use archive::{
     check as check_archive, to_archive, ArchiveOptions, ArchiveReport, Blocker, Part,
     NOT_A_CERTIFICATE,
 };
+pub use build::{images_to_pdf, ImagesToPdfOptions, Orientation, PageSize};
+pub use compare::{compare, Change, ChangeKind, CompareReport};
+pub use compress::{compress_to_target, PdfCompressOptions, PdfCompressor, PdfKnob};
+pub use crop::{crop, CropReport, CropSpec};
 pub use forms::{
     fields, fill, flatten, Field, FieldKind, FillOptions, FillReport, FlattenReport, NOT_A_FORM,
 };
+pub use inspect::{inspect, DocKind, ImageInfo, PdfReport};
+pub use lossless::{lossless_pass, LosslessStats};
+pub use markdown::{to_markdown, MarkdownOptions, MarkdownReport};
 pub use ocr::{
     read as ocr_read, searchable, Models as OcrModels, OcrOptions, OcrReport, PageText, A_GUESS,
 };
-pub use redact::{
-    redact, RedactOptions, RedactReport, Target as RedactTarget, VECTOR_CAVEAT,
+pub use pagenumbers::{add_page_numbers, NumberPosition, PageNumberOptions};
+pub use pages::{
+    export_pages, extract, merge, page_count, page_preview, page_previews, page_summaries, rebuild,
+    rebuild_ops, remove, reorder, rotate, split, ExportedPage, PageInfo, PageOp, PageOpReport,
+    PageSelection, SplitMode, SplitPart,
 };
+pub use redact::{redact, RedactOptions, RedactReport, Target as RedactTarget, VECTOR_CAVEAT};
 pub use repair::{diagnose, repair, RepairReport, Severity};
 pub use security::{
     inspect_security, protect, unlock, Protection, SecurityInfo, Strength, UnlockKind,
 };
-pub use pages::{
-    export_pages, extract, merge, page_count, page_preview, page_previews, page_summaries, rebuild, rebuild_ops, remove,
-    reorder, rotate, split, PageOp, ExportedPage, PageInfo, PageOpReport, PageSelection, SplitMode, SplitPart,
-};
+pub use sign::{sign, Caption, SignOptions, SignReport, SignatureSpot, NOT_CRYPTOGRAPHIC};
+pub use watermark::{watermark, Mark, Placement, WatermarkOptions};

@@ -134,14 +134,13 @@ pub fn redact(bytes: &[u8], options: &RedactOptions) -> Result<(Vec<u8>, RedactR
                     page_ids.len()
                 )));
             }
-            Target::Area { x, y, width, height, .. } => {
-                if !(0.0..=1.0).contains(x)
+            Target::Area { x, y, width, height, .. }
+                if (!(0.0..=1.0).contains(x)
                     || !(0.0..=1.0).contains(y)
                     || *width <= 0.0
-                    || *height <= 0.0
-                {
-                    return Err(Error::invalid("that redaction box isn't on the page"));
-                }
+                    || *height <= 0.0) =>
+            {
+                return Err(Error::invalid("that redaction box isn't on the page"));
             }
             _ => {}
         }
@@ -389,15 +388,19 @@ fn redact_page(
     let mut outcome = PageOutcome::default();
 
     let metrics = metrics_for(doc, page_id);
-    let encodings = doc.get_page_fonts(page_id).ok().and_then(|fonts| {
-        let mut map = BTreeMap::new();
-        for (name, dict) in fonts {
-            if let Ok(encoding) = dict.get_font_encoding(doc) {
-                map.insert(name.to_vec(), encoding);
+    let encodings = doc
+        .get_page_fonts(page_id)
+        .ok()
+        .map(|fonts| {
+            let mut map = BTreeMap::new();
+            for (name, dict) in fonts {
+                if let Ok(encoding) = dict.get_font_encoding(doc) {
+                    map.insert(name.to_vec(), encoding);
+                }
             }
-        }
-        Some(map)
-    }).unwrap_or_default();
+            map
+        })
+        .unwrap_or_default();
 
     let data = doc.get_page_content(page_id);
     let content = Content::decode(&data)
@@ -565,11 +568,7 @@ fn redact_page(
         rewritten.push(Operation::new("q", vec![]));
         rewritten.push(Operation::new(
             "rg",
-            vec![
-                (r as f32 / 255.0).into(),
-                (g as f32 / 255.0).into(),
-                (b as f32 / 255.0).into(),
-            ],
+            vec![(r as f32 / 255.0).into(), (g as f32 / 255.0).into(), (b as f32 / 255.0).into()],
         ));
         for rect in merge_boxes(&boxes) {
             rewritten.push(Operation::new(
@@ -879,12 +878,8 @@ fn merge_boxes(boxes: &[Rect]) -> Vec<Rect> {
     let mut out: Vec<Rect> = Vec::new();
     for rect in boxes {
         // Grown slightly, so adjacent glyphs count as touching.
-        let probe = Rect {
-            x0: rect.x0 - 1.0,
-            y0: rect.y0 - 0.5,
-            x1: rect.x1 + 1.0,
-            y1: rect.y1 + 0.5,
-        };
+        let probe =
+            Rect { x0: rect.x0 - 1.0, y0: rect.y0 - 0.5, x1: rect.x1 + 1.0, y1: rect.y1 + 0.5 };
         match out.iter_mut().find(|existing| existing.overlaps(&probe)) {
             Some(existing) => *existing = existing.union(rect),
             None => out.push(*rect),
@@ -933,7 +928,7 @@ fn blank_images(
     }
 
     for (name, ctm) in draws {
-        let Ok(Object::Reference(id)) = xobjects.get(name).map(|o| o.clone()) else { continue };
+        let Ok(Object::Reference(id)) = xobjects.get(name).cloned() else { continue };
         // The unit square maps through the CTM, so the drawn area is the
         // image's footprint on the page.
         let (x, y) = ctm.translation();
@@ -1007,8 +1002,7 @@ fn strip_annotations(
                 .and_then(|o| o.as_array().ok())
                 .filter(|r| r.len() >= 4)
                 .map(|r| {
-                    let v: Vec<f32> =
-                        r.iter().map(|o| o.as_float().unwrap_or(0.0)).collect();
+                    let v: Vec<f32> = r.iter().map(|o| o.as_float().unwrap_or(0.0)).collect();
                     Rect::of(v[0], v[1], v[2], v[3])
                 })
                 .map(|rect| areas.iter().any(|a| a.overlaps(&rect)))
@@ -1100,10 +1094,8 @@ fn verify(bytes: &[u8], options: &RedactOptions, report: &mut RedactReport) {
         return;
     };
 
-    let pages: Vec<String> = doc
-        .page_iter()
-        .map(|id| super::markdown::page_lines(&doc, id).join("\n"))
-        .collect();
+    let pages: Vec<String> =
+        doc.page_iter().map(|id| super::markdown::page_lines(&doc, id).join("\n")).collect();
 
     for target in &options.targets {
         let Target::Text { needle, match_case } = target else { continue };
@@ -1114,10 +1106,7 @@ fn verify(bytes: &[u8], options: &RedactOptions, report: &mut RedactReport) {
                 text.to_lowercase().contains(&needle.to_lowercase())
             };
             if found {
-                report.leaks.push(format!(
-                    "'{needle}' can still be read on page {}",
-                    index + 1
-                ));
+                report.leaks.push(format!("'{needle}' can still be read on page {}", index + 1));
             }
         }
     }
@@ -1149,16 +1138,14 @@ fn verify(bytes: &[u8], options: &RedactOptions, report: &mut RedactReport) {
 /// anything else carrying bytes, not only the streams a page is wired to.
 fn find_in_objects(doc: &Document, needle: &str) -> Option<String> {
     let lowered = needle.to_lowercase();
-    let hit = |bytes: &[u8]| -> bool {
-        String::from_utf8_lossy(bytes).to_lowercase().contains(&lowered)
-    };
+    let hit =
+        |bytes: &[u8]| -> bool { String::from_utf8_lossy(bytes).to_lowercase().contains(&lowered) };
 
     for (id, object) in &doc.objects {
         match object {
             Object::Stream(stream) => {
-                let content = stream
-                    .decompressed_content()
-                    .unwrap_or_else(|_| stream.content.clone());
+                let content =
+                    stream.decompressed_content().unwrap_or_else(|_| stream.content.clone());
                 if hit(&content) {
                     return Some(format!("object {} {}", id.0, id.1));
                 }
@@ -1248,26 +1235,24 @@ mod tests {
     fn the_object_sweep_finds_what_page_extraction_misses() {
         // An orphan: a stream no page points at. Extraction can't see it, so
         // the sweep is the only thing standing between it and a leak.
-        let mut doc = Document::load_mem(&testkit::pdf_with_sized_text(&[(14.0, "visible")]))
-            .unwrap();
-        doc.add_object(Stream::new(
-            Dictionary::new(),
-            b"BT (classified-dossier) Tj ET".to_vec(),
-        ));
+        let mut doc =
+            Document::load_mem(&testkit::pdf_with_sized_text(&[(14.0, "visible")])).unwrap();
+        doc.add_object(Stream::new(Dictionary::new(), b"BT (classified-dossier) Tj ET".to_vec()));
         let mut orphaned = Vec::new();
         doc.save_to(&mut orphaned).unwrap();
 
         let reloaded = Document::load_mem(&orphaned).unwrap();
         let pages: String = reloaded
             .page_iter()
-            .map(|id| super::super::markdown::page_lines(&reloaded, id).join("
-"))
+            .map(|id| {
+                super::super::markdown::page_lines(&reloaded, id).join(
+                    "
+",
+                )
+            })
             .collect();
         assert!(!pages.contains("classified-dossier"), "extraction shouldn't see it");
-        assert!(
-            find_in_objects(&reloaded, "classified-dossier").is_some(),
-            "but the sweep must"
-        );
+        assert!(find_in_objects(&reloaded, "classified-dossier").is_some(), "but the sweep must");
     }
 
     /// A scanned page: a picture of the document, with an invisible text layer
@@ -1277,11 +1262,13 @@ mod tests {
 
         let mut doc = Document::with_version("1.5");
         // A bright image standing in for the scan.
-        let picture =
-            image::DynamicImage::ImageRgb8(image::RgbImage::from_pixel(400, 300, image::Rgb([235, 232, 226])));
+        let picture = image::DynamicImage::ImageRgb8(image::RgbImage::from_pixel(
+            400,
+            300,
+            image::Rgb([235, 232, 226]),
+        ));
         let jpeg = super::super::images::encode_jpeg_for_pdf(&picture, 92, false).unwrap();
-        let image_id =
-            doc.add_object(super::super::images::image_stream(jpeg, 400, 300, false));
+        let image_id = doc.add_object(super::super::images::image_stream(jpeg, 400, 300, false));
 
         let font_id = doc.add_object(dictionary! {
             "Type" => "Font",
@@ -1293,7 +1280,8 @@ mod tests {
         // sees the words.
         let content = b"q 400 0 0 300 0 0 cm /Im0 Do Q
 BT /F1 24 Tf 3 Tr 1 0 0 1 40 150 Tm (CLASSIFIED) Tj ET
-".to_vec();
+"
+        .to_vec();
         let content_id = doc.add_object(Stream::new(dictionary! {}, content));
 
         let pages_id = doc.new_object_id();
@@ -1345,9 +1333,11 @@ BT /F1 24 Tf 3 Tr 1 0 0 1 40 150 Tm (CLASSIFIED) Tj ET
         let id = *doc
             .objects
             .iter()
-            .find(|(_, o)| matches!(o, Object::Stream(s)
+            .find(|(_, o)| {
+                matches!(o, Object::Stream(s)
                 if s.dict.get(b"Subtype").ok().and_then(|x| x.as_name().ok())
-                    == Some(b"Image".as_ref())))
+                    == Some(b"Image".as_ref()))
+            })
             .unwrap()
             .0;
         let decoded = super::super::images::decode_image(&doc, id).expect("should decode");
@@ -1458,9 +1448,11 @@ BT /F1 24 Tf 3 Tr 1 0 0 1 40 150 Tm (CLASSIFIED) Tj ET
         let id = *doc
             .objects
             .iter()
-            .find(|(_, o)| matches!(o, Object::Stream(s)
+            .find(|(_, o)| {
+                matches!(o, Object::Stream(s)
                 if s.dict.get(b"Subtype").ok().and_then(|x| x.as_name().ok())
-                    == Some(b"Image".as_ref())))
+                    == Some(b"Image".as_ref()))
+            })
             .unwrap()
             .0;
         let decoded = super::super::images::decode_image(&doc, id).expect("should decode");
@@ -1489,8 +1481,9 @@ BT /F1 24 Tf 3 Tr 1 0 0 1 40 150 Tm (CLASSIFIED) Tj ET
         assert!(!text_of(&out).contains("delete me"));
 
         let doc = Document::load_mem(&out).unwrap();
-        let content = String::from_utf8_lossy(&doc.get_page_content(doc.page_iter().next().unwrap()))
-            .to_string();
+        let content =
+            String::from_utf8_lossy(&doc.get_page_content(doc.page_iter().next().unwrap()))
+                .to_string();
         assert!(!content.contains(" re\n"), "no box should have been drawn: {content}");
     }
 
@@ -1585,5 +1578,3 @@ BT /F1 24 Tf 3 Tr 1 0 0 1 40 150 Tm (CLASSIFIED) Tj ET
         assert_eq!(report.pages_changed, vec![2]);
     }
 }
-
-

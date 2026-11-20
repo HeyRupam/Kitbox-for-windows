@@ -167,12 +167,7 @@ impl BatchResult {
 /// Progress is reported per file before it starts, so a long one doesn't look
 /// like a hang. Cancellation is checked between files: a single compress can
 /// take a few seconds and stopping mid-encode would leave a half file.
-pub fn run(
-    items: &[Item],
-    op: &BatchOp,
-    sink: &dyn ProgressSink,
-    cancel: &Cancel,
-) -> BatchResult {
+pub fn run(items: &[Item], op: &BatchOp, sink: &dyn ProgressSink, cancel: &Cancel) -> BatchResult {
     let mut outcomes = Vec::with_capacity(items.len());
     let mut files = Vec::new();
 
@@ -276,8 +271,7 @@ fn one(item: &Item, op: &BatchOp) -> Result<(Produced, Vec<u8>), String> {
             // right trade when you are chasing a size and the wrong one here:
             // a screenshot would come back with soft text nobody asked to pay
             // for. Compress is the only op allowed to change format.
-            let format =
-                if kind == FileKind::Png { OutputFormat::Png } else { OutputFormat::Keep };
+            let format = if kind == FileKind::Png { OutputFormat::Png } else { OutputFormat::Keep };
             let bytes = image::resize(
                 &item.bytes,
                 image::ResizeMode::LongestEdge(*longest),
@@ -329,8 +323,8 @@ fn one(item: &Item, op: &BatchOp) -> Result<(Produced, Vec<u8>), String> {
             let (adjusted, report) =
                 image::adjust(&item.bytes, options).map_err(|e| e.to_string())?;
             let out_kind = if kind == FileKind::Png { FileKind::Png } else { FileKind::Jpeg };
-            let bytes = image::encode::encode(&adjusted, out_kind, 92, true)
-                .map_err(|e| e.to_string())?;
+            let bytes =
+                image::encode::encode(&adjusted, out_kind, 92, true).map_err(|e| e.to_string())?;
             Ok((
                 Produced {
                     name: rename(&item.name, out_kind.extension()),
@@ -354,16 +348,10 @@ fn one(item: &Item, op: &BatchOp) -> Result<(Produced, Vec<u8>), String> {
 fn unwrap_outcome(outcome: Outcome) -> (Vec<u8>, String, bool) {
     match outcome {
         Outcome::Hit(solved) | Outcome::Padded(solved) => {
-            let quality = solved
-                .score
-                .map(|v| format!("{:.1}% identical, ", v * 100.0))
-                .unwrap_or_default();
+            let quality =
+                solved.score.map(|v| format!("{:.1}% identical, ", v * 100.0)).unwrap_or_default();
             let extra = solved.note.map(|n| format!(" — {n}")).unwrap_or_default();
-            (
-                solved.bytes,
-                format!("{quality}{} attempts{extra}", solved.probes),
-                false,
-            )
+            (solved.bytes, format!("{quality}{} attempts{extra}", solved.probes), false)
         }
         // Not an error: an answer. The file is written at its best and listed
         // apart from the ones that landed.
@@ -416,11 +404,8 @@ mod tests {
         assert_eq!(result.failed(), 1);
         assert_eq!(result.files.len(), 2, "only the good ones produce files");
 
-        let failure = result
-            .outcomes
-            .iter()
-            .find(|o| matches!(o, ItemOutcome::Failed { .. }))
-            .unwrap();
+        let failure =
+            result.outcomes.iter().find(|o| matches!(o, ItemOutcome::Failed { .. })).unwrap();
         assert_eq!(failure.name(), "broken.jpg", "named against its own file");
     }
 
@@ -514,7 +499,8 @@ mod tests {
     fn a_pdf_goes_through_compression_and_is_turned_away_by_the_rest() {
         let pdf = Item { name: "scan.pdf".into(), bytes: testkit::pdf_scan(1, 300, 400, 85) };
 
-        let compressed = run(std::slice::from_ref(&pdf), &compress(80_000), &Silent, &Cancel::new());
+        let compressed =
+            run(std::slice::from_ref(&pdf), &compress(80_000), &Silent, &Cancel::new());
         assert_eq!(compressed.failed(), 0, "{:?}", compressed.outcomes);
 
         let resized = run(
@@ -584,7 +570,9 @@ mod tests {
         let result = run(&items, &BatchOp::Resize { longest: 120 }, &Silent, &Cancel::new());
 
         match &result.outcomes[0] {
-            ItemOutcome::Done(p) => assert_eq!(p.name, "screenshot.png", "the format has to survive"),
+            ItemOutcome::Done(p) => {
+                assert_eq!(p.name, "screenshot.png", "the format has to survive")
+            }
             other => panic!("{other:?}"),
         }
         assert_eq!(FileKind::sniff(&result.files[0].1), FileKind::Png);

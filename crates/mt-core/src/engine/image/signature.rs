@@ -64,7 +64,10 @@ pub struct SignatureReport {
 }
 
 /// Cut the signature out of a photograph, as RGBA with the paper transparent.
-pub fn extract(bytes: &[u8], options: &SignatureOptions) -> Result<(DynamicImage, SignatureReport)> {
+pub fn extract(
+    bytes: &[u8],
+    options: &SignatureOptions,
+) -> Result<(DynamicImage, SignatureReport)> {
     if !(0.0..=1.0).contains(&options.strength) {
         return Err(Error::invalid("strength has to be between 0 and 1"));
     }
@@ -206,9 +209,7 @@ mod tests {
 
     fn encode(image: &DynamicImage) -> Vec<u8> {
         let mut out = Vec::new();
-        image
-            .write_to(&mut std::io::Cursor::new(&mut out), image::ImageFormat::Png)
-            .unwrap();
+        image.write_to(&mut std::io::Cursor::new(&mut out), image::ImageFormat::Png).unwrap();
         out
     }
 
@@ -236,7 +237,8 @@ mod tests {
         // plain brightness threshold would call it ink; dividing by the local
         // background must not.
         let photo = photo_of_a_signature();
-        let (cut, _) = extract_image(&photo, &SignatureOptions { trim: false, ..Default::default() });
+        let (cut, _) =
+            extract_image(&photo, &SignatureOptions { trim: false, ..Default::default() });
         let rgba = cut.to_rgba8();
         // Sample the dark corner of the paper, well away from the stroke.
         for (x, y) in [(560u32, 30u32), (580, 370), (570, 60)] {
@@ -278,11 +280,8 @@ mod tests {
 
     #[test]
     fn blank_paper_is_reported_rather_than_returned_empty() {
-        let blank = DynamicImage::ImageRgb8(image::RgbImage::from_pixel(
-            300,
-            200,
-            Rgb([242, 241, 238]),
-        ));
+        let blank =
+            DynamicImage::ImageRgb8(image::RgbImage::from_pixel(300, 200, Rgb([242, 241, 238])));
         let (_, report) = extract_image(&blank, &SignatureOptions::default());
         assert!(!report.found_ink);
         let note = report.note.expect("should say why");
@@ -291,10 +290,12 @@ mod tests {
 
     #[test]
     fn a_photograph_of_something_dark_is_called_out() {
-        let dark = DynamicImage::ImageRgb8(image::RgbImage::from_pixel(300, 200, Rgb([30, 30, 34])));
+        let dark =
+            DynamicImage::ImageRgb8(image::RgbImage::from_pixel(300, 200, Rgb([30, 30, 34])));
         // A uniformly dark frame divides out to its own background, so what
         // makes this suspicious is reported rather than silently returned.
-        let (_, report) = extract_image(&dark, &SignatureOptions { strength: 1.0, ..Default::default() });
+        let (_, report) =
+            extract_image(&dark, &SignatureOptions { strength: 1.0, ..Default::default() });
         assert!(!report.found_ink || report.note.is_some(), "{report:?}");
     }
 

@@ -72,9 +72,7 @@ impl CompareReport {
         if self.identical {
             out.push_str("The two documents have the same text on every page.\n");
             if !self.visual.is_empty() {
-                out.push_str(
-                    "\nSome pages are scans and were compared as pictures; see below.\n",
-                );
+                out.push_str("\nSome pages are scans and were compared as pictures; see below.\n");
             }
         } else {
             out.push_str(&format!(
@@ -182,9 +180,7 @@ pub fn compare(before: &[u8], after: &[u8]) -> Result<CompareReport> {
     let mut pending_added: Vec<usize> = Vec::new();
     let mut scanned_pairs = 0usize;
 
-    let flush = |report: &mut CompareReport,
-                 removed: &mut Vec<usize>,
-                 added: &mut Vec<usize>| {
+    let flush = |report: &mut CompareReport, removed: &mut Vec<usize>, added: &mut Vec<usize>| {
         // A removal immediately followed by an addition is a rewritten page,
         // which reads far better as a line diff than as two whole pages.
         while !removed.is_empty() && !added.is_empty() {
@@ -223,9 +219,7 @@ pub fn compare(before: &[u8], after: &[u8]) -> Result<CompareReport> {
                 // Identical text. If there is none, the pages may still be
                 // scans that differ, so look at them.
                 if a_text[*i].is_empty() && b_text[*j].is_empty() {
-                    if let Some(difference) =
-                        visual_difference(&a, a_pages[*i], &b, b_pages[*j])
-                    {
+                    if let Some(difference) = visual_difference(&a, a_pages[*i], &b, b_pages[*j]) {
                         scanned_pairs += 1;
                         report.visual.push(VisualDifference {
                             page_before: *i as u32 + 1,
@@ -254,8 +248,8 @@ pub fn compare(before: &[u8], after: &[u8]) -> Result<CompareReport> {
             if scanned_pairs == 1 { "it was" } else { "they were" }
         ));
     }
-    let total_lines: usize = a_text.iter().map(Vec::len).sum::<usize>()
-        + b_text.iter().map(Vec::len).sum::<usize>();
+    let total_lines: usize =
+        a_text.iter().map(Vec::len).sum::<usize>() + b_text.iter().map(Vec::len).sum::<usize>();
     if total_lines == 0 {
         report.notes.push(
             "Neither document has a text layer, so only the pictures could be compared. \
@@ -280,11 +274,7 @@ fn load(bytes: &[u8], which: &str) -> Result<Document> {
 
 /// Normalised page text, for deciding which pages correspond.
 fn fingerprint(lines: &[String]) -> String {
-    lines
-        .iter()
-        .map(|line| normalise(line))
-        .collect::<Vec<_>>()
-        .join("\n")
+    lines.iter().map(|line| normalise(line)).collect::<Vec<_>>().join("\n")
 }
 
 /// Whitespace and case are not changes worth reporting.
@@ -382,7 +372,8 @@ fn diff<T: PartialEq>(a: &[T], b: &[T]) -> Vec<Op> {
     }
 
     let mut end = 0;
-    while end < a.len() - start && end < b.len() - start
+    while end < a.len() - start
+        && end < b.len() - start
         && a[a.len() - 1 - end] == b[b.len() - 1 - end]
     {
         end += 1;
@@ -511,8 +502,7 @@ mod tests {
         let inserted = doc(&["Brand new page in the middle", "with new content"]);
 
         let (a, _) = super::super::merge(&[page_one.clone(), page_two.clone()]).unwrap();
-        let (b, _) =
-            super::super::merge(&[page_one, inserted, page_two]).unwrap();
+        let (b, _) = super::super::merge(&[page_one, inserted, page_two]).unwrap();
 
         let report = compare(&a, &b).unwrap();
         assert_eq!(report.pages_before, 2);

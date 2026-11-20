@@ -39,17 +39,28 @@ use crate::error::{Error, Result};
 pub enum Mark {
     /// Words on the page. The box is where they start and how wide they may
     /// run before wrapping.
-    Text { text: String, size: f32 },
+    Text {
+        text: String,
+        size: f32,
+    },
     /// Colour multiplied into the page, the way a marker pen works.
     Highlight,
     /// Opaque paint over a mistake. Covers; does not remove.
     Whiteout,
-    Rectangle { filled: bool },
-    Ellipse { filled: bool },
+    Rectangle {
+        filled: bool,
+    },
+    Ellipse {
+        filled: bool,
+    },
     /// From the box's bottom-left corner to its top-right.
-    Line { arrow: bool },
+    Line {
+        arrow: bool,
+    },
     /// Freehand, as fractions of the whole page.
-    Ink { points: Vec<(f32, f32)> },
+    Ink {
+        points: Vec<(f32, f32)>,
+    },
 }
 
 /// One mark, placed in fractions of the page **as displayed**, with `(0,0)` at
@@ -205,7 +216,8 @@ fn state_for(mark: &Annotation, states: &mut Vec<(String, Dictionary)>) -> Strin
     let alpha = if multiply { 1.0 } else { mark.opacity };
     // Two marks at the same opacity and blend share one state rather than
     // adding a near-duplicate to the page's resources for each.
-    let key = format!("KbxAn{}{}", if multiply { "M" } else { "N" }, (alpha * 100.0).round() as u32);
+    let key =
+        format!("KbxAn{}{}", if multiply { "M" } else { "N" }, (alpha * 100.0).round() as u32);
 
     if !states.iter().any(|(name, _)| *name == key) {
         let mut state = dictionary! {
@@ -244,10 +256,7 @@ fn draw(
         for (index, (px, py)) in points.iter().enumerate() {
             let x = px.clamp(0.0, 1.0) * page_w;
             let y = page_h - py.clamp(0.0, 1.0) * page_h;
-            out.push_str(&format!(
-                "{x:.2} {y:.2} {}\n",
-                if index == 0 { "m" } else { "l" }
-            ));
+            out.push_str(&format!("{x:.2} {y:.2} {}\n", if index == 0 { "m" } else { "l" }));
         }
         out.push_str("S\nQ\n");
         return out;
@@ -278,10 +287,7 @@ fn draw(
             // From the top of the box downwards, which is how text is read.
             let mut y = h - size;
             for piece in lines {
-                out.push_str(&format!(
-                    "1 0 0 1 0 {y:.2} Tm\n({}) Tj\n",
-                    escape_text(&piece)
-                ));
+                out.push_str(&format!("1 0 0 1 0 {y:.2} Tm\n({}) Tj\n", escape_text(&piece)));
                 y -= size * 1.2;
             }
             out.push_str("ET\n");
@@ -338,10 +344,26 @@ fn ellipse(w: f32, h: f32, line: f32) -> String {
          {:.2} {:.2} {:.2} {:.2} {cx:.2} {:.2} c\n\
          {:.2} {:.2} {:.2} {:.2} {:.2} {cy:.2} c\n",
         x0,
-        x0, cy + oy, cx - ox, y1, y1,
-        cx + ox, y1, x1, cy + oy, x1,
-        x1, cy - oy, cx + ox, y0, y0,
-        cx - ox, y0, x0, cy - oy, x0,
+        x0,
+        cy + oy,
+        cx - ox,
+        y1,
+        y1,
+        cx + ox,
+        y1,
+        x1,
+        cy + oy,
+        x1,
+        x1,
+        cy - oy,
+        cx + ox,
+        y0,
+        y0,
+        cx - ox,
+        y0,
+        x0,
+        cy - oy,
+        x0,
     )
 }
 
@@ -372,7 +394,8 @@ fn wrap(text: &str, size: f32, width: f32) -> Vec<String> {
     for paragraph in text.split('\n') {
         let mut line = String::new();
         for word in paragraph.split_whitespace() {
-            let candidate = if line.is_empty() { word.to_string() } else { format!("{line} {word}") };
+            let candidate =
+                if line.is_empty() { word.to_string() } else { format!("{line} {word}") };
             if text_width(&candidate, size) <= width || line.is_empty() {
                 line = candidate;
             } else {
@@ -416,11 +439,9 @@ mod tests {
 
     #[test]
     fn written_text_can_be_read_back_off_the_page() {
-        let (out, report) = annotate(
-            &page(),
-            &one(Mark::Text { text: "Approved 11 Nov".into(), size: 11.0 }),
-        )
-        .unwrap();
+        let (out, report) =
+            annotate(&page(), &one(Mark::Text { text: "Approved 11 Nov".into(), size: 11.0 }))
+                .unwrap();
         assert_eq!(report.drawn, 1);
         assert_eq!(report.pages_changed, vec![1]);
 
@@ -463,11 +484,8 @@ mod tests {
     #[test]
     fn whiteout_says_it_only_covers() {
         let (_, report) = annotate(&page(), &one(Mark::Whiteout)).unwrap();
-        let warning = report
-            .warnings
-            .iter()
-            .find(|w| w.contains("does not remove"))
-            .expect("it must say so");
+        let warning =
+            report.warnings.iter().find(|w| w.contains("does not remove")).expect("it must say so");
         assert!(warning.contains("Redact"), "it should point at what does: {warning}");
     }
 
@@ -512,8 +530,7 @@ mod tests {
 
     #[test]
     fn freehand_draws_through_all_its_points() {
-        let points: Vec<(f32, f32)> =
-            (0..8).map(|i| (0.1 + i as f32 * 0.05, 0.5)).collect();
+        let points: Vec<(f32, f32)> = (0..8).map(|i| (0.1 + i as f32 * 0.05, 0.5)).collect();
         let (out, _) = annotate(&page(), &one(Mark::Ink { points })).unwrap();
         let drawn = &content_of(&out)[0];
         assert_eq!(drawn.matches(" m\n").count(), 1, "one start: {drawn}");
@@ -534,8 +551,7 @@ mod tests {
         assert_eq!(report.drawn, 2);
         assert_eq!(page_count(&out).unwrap(), 3);
 
-        let marked: Vec<bool> =
-            content_of(&out).iter().map(|c| c.contains("/KbxAn")).collect();
+        let marked: Vec<bool> = content_of(&out).iter().map(|c| c.contains("/KbxAn")).collect();
         assert_eq!(marked, vec![true, false, true]);
     }
 
@@ -545,7 +561,14 @@ mod tests {
             marks: vec![
                 Annotation::new(1, 0.1, 0.1, 0.2, 0.05, Mark::Highlight),
                 Annotation::new(1, 0.1, 0.3, 0.2, 0.05, Mark::Rectangle { filled: false }),
-                Annotation::new(1, 0.1, 0.5, 0.3, 0.05, Mark::Text { text: "note".into(), size: 9.0 }),
+                Annotation::new(
+                    1,
+                    0.1,
+                    0.5,
+                    0.3,
+                    0.05,
+                    Mark::Text { text: "note".into(), size: 9.0 },
+                ),
             ],
         };
         let (out, report) = annotate(&page(), &options).unwrap();
@@ -558,7 +581,16 @@ mod tests {
     fn marks_sharing_an_opacity_share_one_graphics_state() {
         let options = AnnotateOptions {
             marks: (0..4)
-                .map(|i| Annotation::new(1, 0.1, 0.1 * i as f32, 0.2, 0.05, Mark::Rectangle { filled: true }))
+                .map(|i| {
+                    Annotation::new(
+                        1,
+                        0.1,
+                        0.1 * i as f32,
+                        0.2,
+                        0.05,
+                        Mark::Rectangle { filled: true },
+                    )
+                })
                 .collect(),
         };
         let (out, _) = annotate(&page(), &options).unwrap();

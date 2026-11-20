@@ -287,17 +287,16 @@ pub fn run(recipe: &Recipe, name: &str, bytes: &[u8]) -> Result<Produced, String
                     let note = format!("{}, {}", solved.knob, mt_core::format_size(solved.size));
                     (solved.bytes, note)
                 }
-                mt_core::Outcome::Padded(solved) => (
-                    solved.bytes,
-                    "padded up to clear the minimum".to_string(),
-                ),
+                mt_core::Outcome::Padded(solved) => {
+                    (solved.bytes, "padded up to clear the minimum".to_string())
+                }
                 mt_core::Outcome::Infeasible { best, why, .. } => (best, why),
             };
             single(out, note)
         }
 
         Recipe::Transform { op, options } => {
-            let opts = options.clone().unwrap_or_default();
+            let opts = (*options).unwrap_or_default();
             let out = match op {
                 TransformOp::Resize(mode) => img::resize(bytes, *mode, &opts),
                 TransformOp::Crop(rect) => img::crop(bytes, *rect, &opts),
@@ -315,8 +314,8 @@ pub fn run(recipe: &Recipe, name: &str, bytes: &[u8]) -> Result<Produced, String
         Recipe::Adjust { options } => {
             let (adjusted, report) = img::adjust(bytes, options).map_err(|e| e.to_string())?;
             let out_kind = if kind == FileKind::Png { FileKind::Png } else { FileKind::Jpeg };
-            let out = img::encode::encode(&adjusted, out_kind, 92, true)
-                .map_err(|e| e.to_string())?;
+            let out =
+                img::encode::encode(&adjusted, out_kind, 92, true).map_err(|e| e.to_string())?;
             single(out, format!("{}×{}", report.width, report.height))
         }
 
@@ -348,9 +347,7 @@ pub fn run(recipe: &Recipe, name: &str, bytes: &[u8]) -> Result<Produced, String
             let files: Vec<(String, Vec<u8>)> = pages
                 .iter()
                 .filter_map(|page| {
-                    page.jpeg
-                        .clone()
-                        .map(|jpeg| (format!("{stem}-{}.jpg", page.page), jpeg))
+                    page.jpeg.clone().map(|jpeg| (format!("{stem}-{}.jpg", page.page), jpeg))
                 })
                 .collect();
             let missed = pages.len() - files.len();
@@ -359,7 +356,11 @@ pub fn run(recipe: &Recipe, name: &str, bytes: &[u8]) -> Result<Produced, String
                     "exported {} page{} as JPG{}",
                     files.len(),
                     if files.len() == 1 { "" } else { "s" },
-                    if missed > 0 { format!(", {missed} could not be drawn") } else { String::new() }
+                    if missed > 0 {
+                        format!(", {missed} could not be drawn")
+                    } else {
+                        String::new()
+                    }
                 ),
                 files,
             })
@@ -367,8 +368,8 @@ pub fn run(recipe: &Recipe, name: &str, bytes: &[u8]) -> Result<Produced, String
 
         Recipe::CropPdf { pages, spec } => {
             let selection = selection(bytes, pages.as_deref())?;
-            let (out, _report) = pdf::crop(bytes, selection.as_ref(), spec)
-                .map_err(|e| e.to_string())?;
+            let (out, _report) =
+                pdf::crop(bytes, selection.as_ref(), spec).map_err(|e| e.to_string())?;
             single(out, "cropped".into())
         }
 
@@ -387,21 +388,19 @@ pub fn run(recipe: &Recipe, name: &str, bytes: &[u8]) -> Result<Produced, String
         }
 
         Recipe::WatermarkImage { options, mark } => {
-            let text = mark
-                .text
-                .clone()
-                .ok_or("this recording doesn't say what the mark was")?;
+            let text = mark.text.clone().ok_or("this recording doesn't say what the mark was")?;
             let font = crate::system_font()?;
-            let out = img::watermark::watermark(bytes, &img::ImageMark::Text { text, font }, options)
-                .map_err(|e| e.to_string())?;
+            let out =
+                img::watermark::watermark(bytes, &img::ImageMark::Text { text, font }, options)
+                    .map_err(|e| e.to_string())?;
             single(out, "watermarked".into())
         }
 
         Recipe::Meme { options } => {
             let font = crate::caption_font()?;
             let (image, report) = img::meme(bytes, &font, options).map_err(|e| e.to_string())?;
-            let out = img::encode::encode(&image, FileKind::Jpeg, 92, true)
-                .map_err(|e| e.to_string())?;
+            let out =
+                img::encode::encode(&image, FileKind::Jpeg, 92, true).map_err(|e| e.to_string())?;
             single(out, format!("captioned, {}×{}", report.width, report.height))
         }
 
@@ -496,11 +495,7 @@ fn selection(bytes: &[u8], spec: Option<&str>) -> Result<Option<pdf::PageSelecti
 }
 
 fn stem(name: &str) -> String {
-    std::path::Path::new(name)
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or("file")
-        .to_string()
+    std::path::Path::new(name).file_stem().and_then(|s| s.to_str()).unwrap_or("file").to_string()
 }
 
 fn renamed(name: &str, extension: &str) -> String {
@@ -649,10 +644,7 @@ mod tests {
 
     #[test]
     fn splitting_names_every_piece_after_the_new_file() {
-        let json = recorded(
-            "split",
-            serde_json::json!({ "mode": pdf::SplitMode::EveryPage }),
-        );
+        let json = recorded("split", serde_json::json!({ "mode": pdf::SplitMode::EveryPage }));
         let recipe: Recipe = serde_json::from_str(&json).unwrap();
         let pdf = mt_core::testkit::pdf_scan(3, 200, 260, 80);
         let produced = run(&recipe, "statement.pdf", &pdf).expect("a replay");

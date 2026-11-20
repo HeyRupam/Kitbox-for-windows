@@ -32,7 +32,11 @@ fn main() {
     image.save(&out).unwrap();
     println!(
         "{}x{} in {:?}  levels {:?}  gain {:?}",
-        report.width, report.height, started.elapsed(), report.levels, report.colour_gain
+        report.width,
+        report.height,
+        started.elapsed(),
+        report.levels,
+        report.colour_gain
     );
     for w in &report.warnings {
         println!("  warning: {w}");

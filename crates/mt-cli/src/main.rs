@@ -564,9 +564,7 @@ enum Command {
     },
 
     /// List a PDF form's fields and what they accept.
-    Fields {
-        file: PathBuf,
-    },
+    Fields { file: PathBuf },
 
     /// Fill in a PDF form.
     Fill {
@@ -960,11 +958,8 @@ fn main() -> Result<()> {
                 BiasArg::ShrinkPixels => Bias::ShrinkPixels,
             };
 
-            let pdf_opts = PdfCompressOptions {
-                strip_metadata: strip,
-                allow_grayscale: grayscale,
-                min_dpi,
-            };
+            let pdf_opts =
+                PdfCompressOptions { strip_metadata: strip, allow_grayscale: grayscale, min_dpi };
 
             let mut failures = 0;
             for file in &files {
@@ -1022,8 +1017,8 @@ fn main() -> Result<()> {
 
             let mut items = Vec::new();
             for file in &files {
-                let bytes = std::fs::read(file)
-                    .with_context(|| format!("reading {}", file.display()))?;
+                let bytes =
+                    std::fs::read(file).with_context(|| format!("reading {}", file.display()))?;
                 let name = file
                     .file_name()
                     .map(|n| n.to_string_lossy().into_owned())
@@ -1033,11 +1028,9 @@ fn main() -> Result<()> {
 
             println!("{} on {} files", op.describe(), items.len());
             let report = |p: mt_core::job::Progress| println!("  {}", p.stage);
-            let result =
-                mt_core::batch::run(&items, &op, &report, &mt_core::job::Cancel::new());
+            let result = mt_core::batch::run(&items, &op, &report, &mt_core::job::Cancel::new());
 
-            std::fs::create_dir_all(&out)
-                .with_context(|| format!("making {}", out.display()))?;
+            std::fs::create_dir_all(&out).with_context(|| format!("making {}", out.display()))?;
             for (name, bytes) in &result.files {
                 deliver(
                     store.as_ref(),
@@ -1085,8 +1078,8 @@ fn main() -> Result<()> {
 
         Command::Inspect { files } => {
             for file in files {
-                let bytes = std::fs::read(&file)
-                    .with_context(|| format!("reading {}", file.display()))?;
+                let bytes =
+                    std::fs::read(&file).with_context(|| format!("reading {}", file.display()))?;
                 let kind = FileKind::sniff(&bytes);
                 print!("{}  {}  {}", file.display(), kind.label(), format_size(bytes.len() as u64));
                 if kind.is_image() {
@@ -1304,8 +1297,7 @@ fn main() -> Result<()> {
         Command::ToImages { file, out, max_px, quality } => {
             let bytes =
                 std::fs::read(&file).with_context(|| format!("reading {}", file.display()))?;
-            let exported =
-                pdf::export_pages(&bytes, (max_px > 0).then_some(max_px), quality)?;
+            let exported = pdf::export_pages(&bytes, (max_px > 0).then_some(max_px), quality)?;
             let dir = out.unwrap_or_else(|| file.parent().unwrap_or(Path::new(".")).to_path_buf());
             std::fs::create_dir_all(&dir)?;
             let stem = file.file_stem().and_then(|s| s.to_str()).unwrap_or("document");
@@ -1377,9 +1369,11 @@ fn main() -> Result<()> {
                 (None, Some(spec)) => How::Aspect(parse_aspect(spec)?),
                 _ => bail!("choose one of --rect or --aspect"),
             };
-            for_each_image(&files, out.as_deref(), "cropped", store.as_ref(), |bytes, opts| match how {
-                How::Rect(r) => img::crop(bytes, r, opts),
-                How::Aspect(a) => img::crop_to_aspect(bytes, a, opts),
+            for_each_image(&files, out.as_deref(), "cropped", store.as_ref(), |bytes, opts| {
+                match how {
+                    How::Rect(r) => img::crop(bytes, r, opts),
+                    How::Aspect(a) => img::crop_to_aspect(bytes, a, opts),
+                }
             })?;
         }
 
@@ -1402,7 +1396,14 @@ fn main() -> Result<()> {
                 other => bail!("cannot write '{other}' yet — try jpg or png"),
             };
             let opts = img::TransformOptions { format, quality, strip_metadata: true };
-            for_each_image_with(&files, out.as_deref(), "converted", opts, store.as_ref(), img::convert)?;
+            for_each_image_with(
+                &files,
+                out.as_deref(),
+                "converted",
+                opts,
+                store.as_ref(),
+                img::convert,
+            )?;
         }
 
         Command::Protect {
@@ -1473,8 +1474,7 @@ fn main() -> Result<()> {
                 std::fs::read(&file).with_context(|| format!("reading {}", file.display()))?;
             let logo_bytes = match &logo {
                 Some(path) => Some(
-                    std::fs::read(path)
-                        .with_context(|| format!("reading {}", path.display()))?,
+                    std::fs::read(path).with_context(|| format!("reading {}", path.display()))?,
                 ),
                 None => None,
             };
@@ -1486,9 +1486,7 @@ fn main() -> Result<()> {
             // on, so one has to come off the machine.
             if FileKind::sniff(&bytes) != FileKind::Pdf {
                 let mark = match (&text, logo_bytes) {
-                    (Some(t), None) => {
-                        img::ImageMark::Text { text: t.clone(), font: load_font()? }
-                    }
+                    (Some(t), None) => img::ImageMark::Text { text: t.clone(), font: load_font()? },
                     (None, Some(data)) => img::ImageMark::Logo(data),
                     _ => unreachable!("checked above"),
                 };
@@ -1560,9 +1558,7 @@ fn main() -> Result<()> {
                 "{} -> {}  ({} pages marked, {})",
                 file.display(),
                 path.display(),
-                selection
-                    .map(|s| s.pages().len())
-                    .unwrap_or(pdf::page_count(&bytes)? as usize),
+                selection.map(|s| s.pages().len()).unwrap_or(pdf::page_count(&bytes)? as usize),
                 format_size(marked.len() as u64)
             );
         }
@@ -1582,8 +1578,7 @@ fn main() -> Result<()> {
                 Some(spec) => Some(PageSelection::parse(spec, pdf::page_count(&bytes)?)?),
                 None => None,
             };
-            let (numbered, count) =
-                pdf::add_page_numbers(&bytes, selection.as_ref(), &options)?;
+            let (numbered, count) = pdf::add_page_numbers(&bytes, selection.as_ref(), &options)?;
             let path = out.unwrap_or_else(|| default_name(&file, "numbered", "pdf"));
             deliver(
                 store.as_ref(),
@@ -1824,12 +1819,7 @@ fn main() -> Result<()> {
                 report.placements,
                 if report.placements == 1 { "" } else { "s" },
                 if report.pages_signed.len() == 1 { "" } else { "s" },
-                report
-                    .pages_signed
-                    .iter()
-                    .map(|p| p.to_string())
-                    .collect::<Vec<_>>()
-                    .join(", "),
+                report.pages_signed.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(", "),
                 path.display()
             );
             for warning in &report.warnings {
@@ -1857,7 +1847,9 @@ fn main() -> Result<()> {
                         .with_context(|| format!("'{}' isn't a number", parts[i]))
                 };
                 targets.push(pdf::RedactTarget::Area {
-                    page: parts[0].parse().with_context(|| format!("'{}' isn't a page number", parts[0]))?,
+                    page: parts[0]
+                        .parse()
+                        .with_context(|| format!("'{}' isn't a page number", parts[0]))?,
                     x: number(1)?,
                     y: number(2)?,
                     width: number(3)?,
@@ -1885,7 +1877,11 @@ fn main() -> Result<()> {
                 Some((file.as_path(), bytes.as_slice())),
                 &path,
                 &redacted,
-                format!("{} glyphs removed from {} pages", report.glyphs_removed, report.pages_changed.len()),
+                format!(
+                    "{} glyphs removed from {} pages",
+                    report.glyphs_removed,
+                    report.pages_changed.len()
+                ),
             )?;
             println!(
                 "{} glyphs and {} image{} removed on page{} {}  ({})",
@@ -1893,12 +1889,7 @@ fn main() -> Result<()> {
                 report.images_edited,
                 if report.images_edited == 1 { "" } else { "s" },
                 if report.pages_changed.len() == 1 { "" } else { "s" },
-                report
-                    .pages_changed
-                    .iter()
-                    .map(|p| p.to_string())
-                    .collect::<Vec<_>>()
-                    .join(", "),
+                report.pages_changed.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(", "),
                 path.display()
             );
             if report.annotations_removed > 0 {
@@ -2026,12 +2017,7 @@ fn main() -> Result<()> {
                 report.widgets_drawn,
                 if report.widgets_drawn == 1 { "" } else { "s" },
                 if report.pages_changed.len() == 1 { "" } else { "s" },
-                report
-                    .pages_changed
-                    .iter()
-                    .map(|p| p.to_string())
-                    .collect::<Vec<_>>()
-                    .join(", "),
+                report.pages_changed.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(", "),
                 path.display()
             );
             for warning in &report.warnings {
@@ -2073,7 +2059,10 @@ fn main() -> Result<()> {
                         .with_context(|| format!("'{}' isn't a number", parts[i]))
                 };
                 Ok((
-                    parts[0].trim().parse().with_context(|| format!("'{}' isn't a page", parts[0]))?,
+                    parts[0]
+                        .trim()
+                        .parse()
+                        .with_context(|| format!("'{}' isn't a page", parts[0]))?,
                     number(1)?,
                     number(2)?,
                     number(3)?,
@@ -2084,7 +2073,10 @@ fn main() -> Result<()> {
                 ))
             };
 
-            let mut push = |spec: &str, want: usize, make: &dyn Fn(String) -> Result<pdf::AnnotationMark>| -> Result<()> {
+            let mut push = |spec: &str,
+                            want: usize,
+                            make: &dyn Fn(String) -> Result<pdf::AnnotationMark>|
+             -> Result<()> {
                 let (page, x, y, w, h, rest) = split(spec, want)?;
                 let mut mark = pdf::Annotation::new(page, x, y, w, h, make(rest)?);
                 mark.colour = rgb;
@@ -2142,12 +2134,7 @@ fn main() -> Result<()> {
                 report.drawn,
                 if report.drawn == 1 { "" } else { "s" },
                 if report.pages_changed.len() == 1 { "" } else { "s" },
-                report
-                    .pages_changed
-                    .iter()
-                    .map(|p| p.to_string())
-                    .collect::<Vec<_>>()
-                    .join(", "),
+                report.pages_changed.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(", "),
                 path.display()
             );
             for warning in &report.warnings {
@@ -2160,8 +2147,9 @@ fn main() -> Result<()> {
             let bytes =
                 std::fs::read(&file).with_context(|| format!("reading {}", file.display()))?;
             let font = match &font {
-                Some(path) => std::fs::read(path)
-                    .with_context(|| format!("reading {}", path.display()))?,
+                Some(path) => {
+                    std::fs::read(path).with_context(|| format!("reading {}", path.display()))?
+                }
                 None => caption_font()?,
             };
 
@@ -2237,7 +2225,11 @@ fn main() -> Result<()> {
                     Some((file.as_path(), bytes.as_slice())),
                     &path,
                     &converted,
-                    format!("{}, {}", report.part, if report.conformant { "conformant" } else { "not conformant" }),
+                    format!(
+                        "{}, {}",
+                        report.part,
+                        if report.conformant { "conformant" } else { "not conformant" }
+                    ),
                 )?;
                 println!("{}", path.display());
                 report
@@ -2330,10 +2322,7 @@ fn main() -> Result<()> {
                 );
             }
             if let Some(gain) = report.colour_gain {
-                println!(
-                    "  colour corrected by {:.2}, {:.2}, {:.2}",
-                    gain[0], gain[1], gain[2]
-                );
+                println!("  colour corrected by {:.2}, {:.2}, {:.2}", gain[0], gain[1], gain[2]);
             }
             for warning in &report.warnings {
                 println!("  warning: {warning}");
@@ -2555,10 +2544,8 @@ fn main() -> Result<()> {
             }
 
             eprintln!("loading the models…");
-            let engine = pdf::OcrModels::load(
-                std::fs::read(&detection)?,
-                std::fs::read(&recognition)?,
-            )?;
+            let engine =
+                pdf::OcrModels::load(std::fs::read(&detection)?, std::fs::read(&recognition)?)?;
 
             let selection = match &pages {
                 Some(spec) => {
@@ -2567,11 +2554,8 @@ fn main() -> Result<()> {
                 }
                 None => None,
             };
-            let options = pdf::OcrOptions {
-                pages: selection,
-                skip_pages_with_text: !all_pages,
-                max_px,
-            };
+            let options =
+                pdf::OcrOptions { pages: selection, skip_pages_with_text: !all_pages, max_px };
 
             if text {
                 let (found, report) = pdf::ocr_read(&bytes, &engine, &options)?;
@@ -2640,8 +2624,8 @@ fn main() -> Result<()> {
         }
 
         Command::Compare { before, after, out } => {
-            let a = std::fs::read(&before)
-                .with_context(|| format!("reading {}", before.display()))?;
+            let a =
+                std::fs::read(&before).with_context(|| format!("reading {}", before.display()))?;
             let b =
                 std::fs::read(&after).with_context(|| format!("reading {}", after.display()))?;
             let report = pdf::compare(&a, &b)?;
@@ -2656,7 +2640,10 @@ fn main() -> Result<()> {
                         None,
                         &path,
                         report.summary().as_bytes(),
-                        format!("{} lines added, {} removed", report.lines_added, report.lines_removed),
+                        format!(
+                            "{} lines added, {} removed",
+                            report.lines_added, report.lines_removed
+                        ),
                     )?;
                     println!(
                         "{} vs {}  ({} added, {} removed)  -> {}",
@@ -2725,7 +2712,9 @@ fn compress_one(
     let name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("output");
     let out_path = out_dir
         .map(|d| d.join(format!("{name}-kitbox.{}", output_kind.extension())))
-        .unwrap_or_else(|| path.with_file_name(format!("{name}-kitbox.{}", output_kind.extension())));
+        .unwrap_or_else(|| {
+            path.with_file_name(format!("{name}-kitbox.{}", output_kind.extension()))
+        });
 
     match &outcome {
         Outcome::Infeasible { why, suggestions, best_size, .. } => {
@@ -2933,12 +2922,7 @@ where
                     Some((file.as_path(), bytes.as_slice())),
                     &path,
                     &output,
-                    format!(
-                        "{} {}, {}",
-                        verb,
-                        dims,
-                        format_size(output.len() as u64)
-                    ),
+                    format!("{} {}, {}", verb, dims, format_size(output.len() as u64)),
                     elapsed,
                 )?;
             }
@@ -3042,19 +3026,10 @@ fn parse_colour(spec: &str) -> Result<[u8; 3]> {
         bail!("'{spec}' should look like #5a5a5a");
     }
     let part = |i: usize| -> Result<u8> {
-        u8::from_str_radix(&hex[i..i + 2], 16)
-            .with_context(|| format!("'{spec}' is not a colour"))
+        u8::from_str_radix(&hex[i..i + 2], 16).with_context(|| format!("'{spec}' is not a colour"))
     };
     Ok([part(0)?, part(2)?, part(4)?])
 }
-
-/// `report.pdf` → `report-protected.pdf`, beside the original.
-
-
-/// Where the desktop app keeps the OCR models, so the two agree without being
-/// told.
-
-/// The machine's own sRGB profile, for the archival output intent.
 
 /// The heaviest face on this machine, for captions.
 fn caption_font() -> Result<Vec<u8>> {
@@ -3071,6 +3046,7 @@ fn caption_font() -> Result<Vec<u8>> {
         .ok_or_else(|| anyhow::anyhow!("no font found — pass one with --font"))
 }
 
+/// The machine's own sRGB profile, for the archival output intent.
 fn system_srgb_profile() -> Option<Vec<u8>> {
     let root = std::env::var_os("SystemRoot").unwrap_or_else(|| "C:\\Windows".into());
     let path = PathBuf::from(root)
@@ -3082,15 +3058,13 @@ fn system_srgb_profile() -> Option<Vec<u8>> {
     std::fs::read(path).ok()
 }
 
+/// Where the desktop app keeps the OCR models, so the two agree without being
+/// told.
 fn default_model_dir() -> PathBuf {
     let base = std::env::var_os("LOCALAPPDATA")
         .map(PathBuf::from)
-        .or_else(|| {
-            std::env::var_os("XDG_DATA_HOME").map(PathBuf::from)
-        })
-        .or_else(|| {
-            std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".local/share"))
-        })
+        .or_else(|| std::env::var_os("XDG_DATA_HOME").map(PathBuf::from))
+        .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".local/share")))
         .unwrap_or_else(|| PathBuf::from("."));
     base.join("com.kitbox.desktop").join("models")
 }
@@ -3106,12 +3080,7 @@ fn ocr_summary(report: &mt_core::engine::pdf::OcrReport) {
     if !report.pages_with_text.is_empty() {
         println!(
             "  already had text, left alone: {}",
-            report
-                .pages_with_text
-                .iter()
-                .map(|p| p.to_string())
-                .collect::<Vec<_>>()
-                .join(", ")
+            report.pages_with_text.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(", ")
         );
     }
     for warning in &report.warnings {
@@ -3120,6 +3089,7 @@ fn ocr_summary(report: &mt_core::engine::pdf::OcrReport) {
     println!("  {}", report.note);
 }
 
+/// `report.pdf` → `report-protected.pdf`, beside the original.
 fn default_name(file: &Path, suffix: &str, ext: &str) -> PathBuf {
     let stem = file.file_stem().and_then(|s| s.to_str()).unwrap_or("document");
     if suffix.is_empty() {
@@ -3262,15 +3232,10 @@ fn print_pdf_breakdown(bytes: &[u8]) -> Result<()> {
         let mut images = report.images.clone();
         images.sort_by_key(|i| std::cmp::Reverse(i.bytes));
         for img in images.iter().take(8) {
-            let dpi = img
-                .dpi
-                .map(|d| format!("{d:.0} DPI"))
-                .unwrap_or_else(|| "DPI unknown".into());
-            let note = img
-                .skip_reason
-                .as_deref()
-                .map(|r| format!("  — skipped: {r}"))
-                .unwrap_or_default();
+            let dpi =
+                img.dpi.map(|d| format!("{d:.0} DPI")).unwrap_or_else(|| "DPI unknown".into());
+            let note =
+                img.skip_reason.as_deref().map(|r| format!("  — skipped: {r}")).unwrap_or_default();
             println!(
                 "    {:>9}  {}×{}  {dpi}  {} {}{note}",
                 format_size(img.bytes),
@@ -3336,8 +3301,7 @@ mod tests {
         let exempt = ["Protect", "Unlock"];
 
         for block in source.split("        Command::").skip(1) {
-            let name: String =
-                block.chars().take_while(|c| c.is_alphanumeric()).collect();
+            let name: String = block.chars().take_while(|c| c.is_alphanumeric()).collect();
             let body = block.split("\n        Command::").next().unwrap_or("");
 
             let writes = body.contains("write_out(") || body.contains("std::fs::write(");
@@ -3359,10 +3323,7 @@ mod tests {
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/main.rs"),
         )
         .expect("own source");
-        let deliver = source
-            .split("fn deliver(")
-            .nth(1)
-            .expect("deliver still exists");
+        let deliver = source.split("fn deliver(").nth(1).expect("deliver still exists");
         let body = deliver.split("\nfn ").next().unwrap_or("");
         assert!(body.contains("write_out("), "deliver has to write the file");
         assert!(body.contains("record_job("), "deliver has to record it");

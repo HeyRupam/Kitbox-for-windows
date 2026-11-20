@@ -13,11 +13,7 @@ fn main() {
         backdrop: match backdrop {
             Some(hex) => {
                 let n = u32::from_str_radix(&hex, 16).expect("RRGGBB");
-                mt_core::engine::image::Backdrop::Colour([
-                    (n >> 16) as u8,
-                    (n >> 8) as u8,
-                    n as u8,
-                ])
+                mt_core::engine::image::Backdrop::Colour([(n >> 16) as u8, (n >> 8) as u8, n as u8])
             }
             None => mt_core::engine::image::Backdrop::Transparent,
         },
@@ -25,9 +21,12 @@ fn main() {
     };
 
     let started = std::time::Instant::now();
-    let (image, report) =
-        mt_core::engine::image::remove_background(&std::fs::read(&input).unwrap(), &model, &options)
-            .unwrap();
+    let (image, report) = mt_core::engine::image::remove_background(
+        &std::fs::read(&input).unwrap(),
+        &model,
+        &options,
+    )
+    .unwrap();
     image.save(&out).unwrap();
     println!(
         "{out}  {}x{}  {:.1}% kept  in {:?}",

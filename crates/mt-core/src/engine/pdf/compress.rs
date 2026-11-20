@@ -79,9 +79,7 @@ impl PdfCompressor {
             .map_err(|e| Error::invalid(format!("could not read this PDF: {e}")))?;
 
         if doc.is_encrypted() {
-            return Err(Error::unsupported(
-                "this PDF is password-protected — unlock it first",
-            ));
+            return Err(Error::unsupported("this PDF is password-protected — unlock it first"));
         }
 
         let report = inspect_doc(&doc, bytes.len() as u64)?;
@@ -166,8 +164,7 @@ impl Encodable for PdfCompressor {
         // a floor. Folding that in makes the solver's interpolation land much
         // closer on text-heavy documents.
         let total = self.report.total_bytes.max(1) as f64;
-        let image_fraction =
-            (self.report.recompressible_bytes() as f64 / total).clamp(0.0, 1.0);
+        let image_fraction = (self.report.recompressible_bytes() as f64 / total).clamp(0.0, 1.0);
         let floor = 1.0 - image_fraction;
 
         let mut buckets: std::collections::BTreeMap<i64, PdfKnob> = Default::default();
@@ -278,7 +275,9 @@ impl Encodable for PdfCompressor {
             }
             _ => {
                 if !self.opts.allow_grayscale {
-                    out.push("Allow greyscale — on a scan that typically saves another third.".into());
+                    out.push(
+                        "Allow greyscale — on a scan that typically saves another third.".into(),
+                    );
                 }
                 if self.opts.min_dpi > 72 {
                     out.push(format!(

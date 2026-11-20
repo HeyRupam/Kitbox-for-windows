@@ -31,8 +31,7 @@ fn main() {
             let px = rgb.get_pixel(x as u32, y as u32).0;
             for c in 0..3 {
                 let v = px[c] as f32 / 255.0;
-                input[[0, c, y, x]] =
-                    if plain { v } else { (v / peak - MEAN[c]) / STD[c] };
+                input[[0, c, y, x]] = if plain { v } else { (v / peak - MEAN[c]) / STD[c] };
             }
         }
     }
@@ -41,9 +40,8 @@ fn main() {
     match model.run_one(input.view().into(), None) {
         Ok(value) => {
             let mask: NdTensor<f32, 4> = value.try_into().expect("a float mask");
-            let (lo, hi) = mask
-                .iter()
-                .fold((f32::MAX, f32::MIN), |(lo, hi), v| (lo.min(*v), hi.max(*v)));
+            let (lo, hi) =
+                mask.iter().fold((f32::MAX, f32::MIN), |(lo, hi), v| (lo.min(*v), hi.max(*v)));
             let above = mask.iter().filter(|v| **v > 0.5).count();
             println!(
                 "ran in {:?}: shape {:?}, range {lo:.3}..{hi:.3}, {:.1}% above 0.5",

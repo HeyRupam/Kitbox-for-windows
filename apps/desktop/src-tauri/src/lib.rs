@@ -5,8 +5,8 @@
 //! works, which is what keeps the same engine usable on Android later.
 
 use std::path::{Path, PathBuf};
-use std::time::Instant;
 use std::sync::Mutex;
+use std::time::Instant;
 
 use base64::Engine as _;
 use serde::{Deserialize, Serialize};
@@ -362,10 +362,7 @@ async fn pdf_pages(bytes: Vec<u8>) -> Result<Vec<mt_core::engine::pdf::PageInfo>
 async fn pdf_previews(bytes: Vec<u8>, max_px: u32) -> Result<Vec<Option<String>>, String> {
     let previews =
         mt_core::engine::pdf::pages::page_previews(&bytes, max_px).map_err(|e| e.to_string())?;
-    Ok(previews
-        .into_iter()
-        .map(|p| p.map(|jpeg| data_url(FileKind::Jpeg, &jpeg)))
-        .collect())
+    Ok(previews.into_iter().map(|p| p.map(|jpeg| data_url(FileKind::Jpeg, &jpeg))).collect())
 }
 
 #[tauri::command]
@@ -1002,7 +999,7 @@ struct ExportedPageResponse {
 /// The image transforms, shaped so one command covers four tools.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "value", rename_all = "snake_case")]
-enum TransformOp {
+pub enum TransformOp {
     Resize(mt_core::engine::image::ResizeMode),
     Crop(mt_core::engine::image::Rect),
     CropAspect(f32),
@@ -1159,9 +1156,8 @@ async fn transform_image(
     .map_err(|e| e.to_string())?;
 
     let kind = FileKind::sniff(&output);
-    let (width, height) = image::load_from_memory(&output)
-        .map(|i| (i.width(), i.height()))
-        .unwrap_or((0, 0));
+    let (width, height) =
+        image::load_from_memory(&output).map(|i| (i.width(), i.height())).unwrap_or((0, 0));
     let path = write_output(&state, &request.name, kind.extension(), &output)?;
 
     let _ = remember(
@@ -1227,8 +1223,9 @@ async fn watermark_pdf(
     };
     let marked = selection.as_ref().map(|s| s.pages().len() as u32).unwrap_or(total);
 
-    let output = mt_core::engine::pdf::watermark(&request.bytes, selection.as_ref(), &request.options)
-        .map_err(|e| e.to_string())?;
+    let output =
+        mt_core::engine::pdf::watermark(&request.bytes, selection.as_ref(), &request.options)
+            .map_err(|e| e.to_string())?;
     let path = write_output(&state, &request.name, "pdf", &output)?;
 
     let _ = remember(
@@ -1423,8 +1420,8 @@ async fn signature_preview(
     bytes: Vec<u8>,
     options: mt_core::engine::image::SignatureOptions,
 ) -> Result<SignaturePreview, String> {
-    let (image, report) = mt_core::engine::image::extract_signature(&bytes, &options)
-        .map_err(|e| e.to_string())?;
+    let (image, report) =
+        mt_core::engine::image::extract_signature(&bytes, &options).map_err(|e| e.to_string())?;
     // PNG, because the whole point is the transparency.
     let png = mt_core::engine::image::encode::encode(&image, FileKind::Png, 100, true)
         .map_err(|e| e.to_string())?;
@@ -1445,8 +1442,9 @@ async fn save_signature(
     request: SaveSignatureRequest,
 ) -> Result<TransformResponse, String> {
     let started = Instant::now();
-    let (image, report) = mt_core::engine::image::extract_signature(&request.bytes, &request.options)
-        .map_err(|e| e.to_string())?;
+    let (image, report) =
+        mt_core::engine::image::extract_signature(&request.bytes, &request.options)
+            .map_err(|e| e.to_string())?;
     if !report.found_ink {
         // A fully transparent PNG saved to the gallery would look like success
         // and be useless later.
@@ -1592,8 +1590,8 @@ async fn fill_form(
     request: FillFormRequest,
 ) -> Result<FillFormResponse, String> {
     let started = Instant::now();
-    let (bytes, report) = mt_core::engine::pdf::fill(&request.bytes, &request.options)
-        .map_err(|e| e.to_string())?;
+    let (bytes, report) =
+        mt_core::engine::pdf::fill(&request.bytes, &request.options).map_err(|e| e.to_string())?;
     let path = write_output(&state, &request.name, "pdf", &bytes)?;
 
     let _ = remember(
@@ -1710,9 +1708,8 @@ async fn fetch_models(state: State<'_, AppState>, set: String) -> Result<ModelSt
         if path.exists() {
             continue;
         }
-        let mut response = ureq::get(*url)
-            .call()
-            .map_err(|e| format!("could not reach {url}: {e}"))?;
+        let mut response =
+            ureq::get(*url).call().map_err(|e| format!("could not reach {url}: {e}"))?;
         let mut body = Vec::new();
         std::io::Read::read_to_end(&mut response.body_mut().as_reader(), &mut body)
             .map_err(|e| format!("the download from {url} broke off: {e}"))?;
@@ -2216,8 +2213,8 @@ async fn pdf_to_archive(
         author: request.author.clone(),
     };
 
-    let (bytes, report) = mt_core::engine::pdf::to_archive(&request.bytes, &options)
-        .map_err(|e| e.to_string())?;
+    let (bytes, report) =
+        mt_core::engine::pdf::to_archive(&request.bytes, &options).map_err(|e| e.to_string())?;
     let path = write_output(&state, &request.name, "pdf", &bytes)?;
 
     let _ = remember(
@@ -2271,12 +2268,14 @@ fn caption_font() -> Result<Vec<u8>, String> {
 }
 
 #[tauri::command]
-async fn make_meme(state: State<'_, AppState>, request: MemeRequest) -> Result<MemeResponse, String> {
+async fn make_meme(
+    state: State<'_, AppState>,
+    request: MemeRequest,
+) -> Result<MemeResponse, String> {
     let started = Instant::now();
     let font = caption_font()?;
-    let (image, report) =
-        mt_core::engine::image::meme(&request.bytes, &font, &request.options)
-            .map_err(|e| e.to_string())?;
+    let (image, report) = mt_core::engine::image::meme(&request.bytes, &font, &request.options)
+        .map_err(|e| e.to_string())?;
 
     // PNG: a caption has hard edges against flat colour, which is exactly what
     // JPEG smears.
@@ -2388,12 +2387,8 @@ async fn batch_item(
         (mt_core::batch::ItemOutcome::Skipped { name }, None)
     } else {
         let item = mt_core::batch::Item { name, bytes };
-        let mut result = mt_core::batch::run(
-            std::slice::from_ref(&item),
-            &op,
-            &mt_core::job::Silent,
-            &cancel,
-        );
+        let mut result =
+            mt_core::batch::run(std::slice::from_ref(&item), &op, &mt_core::job::Silent, &cancel);
         let outcome = result.outcomes.pop().ok_or("the file produced no answer")?;
         match result.files.pop() {
             Some((out_name, out_bytes)) => {
@@ -2521,19 +2516,14 @@ async fn save_preset(
 /// Drop your version of a preset. If it replaced a bundled one, that comes
 /// back; if it was your own, it is gone.
 #[tauri::command]
-async fn delete_preset(
-    state: State<'_, AppState>,
-    id: String,
-) -> Result<presets::Loaded, String> {
+async fn delete_preset(state: State<'_, AppState>, id: String) -> Result<presets::Loaded, String> {
     presets::forget(&state.preset_dir, &id)?;
     Ok(presets::load(&state.preset_dir))
 }
 
 /// Measure a file against a preset, and say what was compared.
 #[tauri::command]
-async fn check_preset(
-    request: CheckRequest,
-) -> Result<mt_core::preset::Report, String> {
+async fn check_preset(request: CheckRequest) -> Result<mt_core::preset::Report, String> {
     Ok(mt_core::preset::check(&request.bytes, &request.preset))
 }
 
@@ -2735,9 +2725,7 @@ async fn count_missing(state: State<'_, AppState>) -> Result<u32, String> {
         .all_files()
         .map_err(|e| e.to_string())?
         .iter()
-        .filter(|f| {
-            !f.pinned && f.source_path.as_deref().is_some_and(|p| !Path::new(p).exists())
-        })
+        .filter(|f| !f.pinned && f.source_path.as_deref().is_some_and(|p| !Path::new(p).exists()))
         .count();
     let loose =
         store.unreachable().map_err(|e| e.to_string())?.iter().filter(|f| !f.pinned).count();
@@ -3133,10 +3121,7 @@ fn start_watching(app: &tauri::AppHandle, watches: &watch::Watches) -> Result<()
         let Ok(event) = event else {
             return;
         };
-        if !matches!(
-            event.kind,
-            notify::EventKind::Create(_) | notify::EventKind::Modify(_)
-        ) {
+        if !matches!(event.kind, notify::EventKind::Create(_) | notify::EventKind::Modify(_)) {
             return;
         }
         for path in event.paths {
@@ -3214,12 +3199,11 @@ fn handle_arrival(app: &tauri::AppHandle, watch: &watch::Watch, path: &Path) {
             &mt_core::job::Cancel::new(),
         );
 
-        let (out_name, out_bytes) = result.files.pop().ok_or_else(|| {
-            match result.outcomes.first() {
+        let (out_name, out_bytes) =
+            result.files.pop().ok_or_else(|| match result.outcomes.first() {
                 Some(mt_core::batch::ItemOutcome::Failed { why, .. }) => why.clone(),
                 _ => "nothing came out".to_string(),
-            }
-        })?;
+            })?;
         let extension = out_name.rsplit_once('.').map(|(_, e)| e).unwrap_or("bin");
         let written = write_output(&state, &out_name, extension, &out_bytes)?;
 
@@ -3626,9 +3610,8 @@ async fn pdf_to_markdown(
     request: MarkdownRequest,
 ) -> Result<MarkdownResponse, String> {
     let started = Instant::now();
-    let (markdown, report) =
-        mt_core::engine::pdf::to_markdown(&request.bytes, &request.options)
-            .map_err(|e| e.to_string())?;
+    let (markdown, report) = mt_core::engine::pdf::to_markdown(&request.bytes, &request.options)
+        .map_err(|e| e.to_string())?;
 
     // Writing an empty file would look like success; a scan gets the report
     // and nothing else.
@@ -3910,9 +3893,12 @@ async fn number_pages(
         None => None,
     };
 
-    let (output, numbered) =
-        mt_core::engine::pdf::add_page_numbers(&request.bytes, selection.as_ref(), &request.options)
-            .map_err(|e| e.to_string())?;
+    let (output, numbered) = mt_core::engine::pdf::add_page_numbers(
+        &request.bytes,
+        selection.as_ref(),
+        &request.options,
+    )
+    .map_err(|e| e.to_string())?;
     let path = write_output(&state, &request.name, "pdf", &output)?;
 
     let _ = remember(
@@ -4020,9 +4006,8 @@ async fn unlock_pdf(
     state: State<'_, AppState>,
     request: UnlockRequest,
 ) -> Result<SecurityResponse, String> {
-    let (opened, kind) =
-        mt_core::engine::pdf::unlock(&request.bytes, request.password.as_deref())
-            .map_err(|e| e.to_string())?;
+    let (opened, kind) = mt_core::engine::pdf::unlock(&request.bytes, request.password.as_deref())
+        .map_err(|e| e.to_string())?;
     let info = mt_core::engine::pdf::inspect_security(&opened).map_err(|e| e.to_string())?;
     let path = write_output(&state, &request.name, "pdf", &opened)?;
 
@@ -4149,8 +4134,7 @@ fn remember_run(state: &State<'_, AppState>, work: Recorded<'_>) -> Result<Strin
 
     let mut anchor: Option<String> = None;
     for (path, bytes) in &work.outputs {
-        let meta =
-            describe_file(&file_name(path), bytes, Some(path.display().to_string()), &store);
+        let meta = describe_file(&file_name(path), bytes, Some(path.display().to_string()), &store);
         let record = store.put(bytes, meta).map_err(|e| e.to_string())?;
         anchor.get_or_insert(record.hash);
     }
@@ -4188,12 +4172,7 @@ fn remember(state: &State<'_, AppState>, work: Recorded<'_>) -> Result<Vec<Strin
 
     let mut output_hashes = Vec::new();
     for (path, bytes) in &work.outputs {
-        let meta = describe_file(
-            &file_name(path),
-            bytes,
-            Some(path.display().to_string()),
-            &store,
-        );
+        let meta = describe_file(&file_name(path), bytes, Some(path.display().to_string()), &store);
         let record = store.put(bytes, meta).map_err(|e| e.to_string())?;
         store
             .record_job(NewJob {
@@ -4215,12 +4194,7 @@ fn remember(state: &State<'_, AppState>, work: Recorded<'_>) -> Result<Vec<Strin
 ///
 /// Without this the gallery is a list of filenames, which is no use for finding
 /// the photo you prepared for a form three weeks ago.
-fn describe_file(
-    name: &str,
-    bytes: &[u8],
-    source_path: Option<String>,
-    store: &Store,
-) -> FileMeta {
+fn describe_file(name: &str, bytes: &[u8], source_path: Option<String>, store: &Store) -> FileMeta {
     let kind = FileKind::sniff(bytes);
     let mut meta = FileMeta {
         name: name.to_string(),
@@ -4234,7 +4208,8 @@ fn describe_file(
     } else if kind.is_image() {
         // Header only — decoding a 12-megapixel photo just for its dimensions
         // would be wasteful.
-        if let Ok(reader) = image::ImageReader::new(std::io::Cursor::new(bytes)).with_guessed_format()
+        if let Ok(reader) =
+            image::ImageReader::new(std::io::Cursor::new(bytes)).with_guessed_format()
         {
             if let Ok((w, h)) = reader.into_dimensions() {
                 meta.width = Some(w);
@@ -4246,11 +4221,7 @@ fn describe_file(
     if let Some(thumb) = make_thumbnail(bytes, kind) {
         if let Ok(record) = store.put(
             &thumb,
-            FileMeta {
-                name: format!("{name}.thumb"),
-                kind: "jpeg".into(),
-                ..Default::default()
-            },
+            FileMeta { name: format!("{name}.thumb"), kind: "jpeg".into(), ..Default::default() },
         ) {
             meta.thumb_hash = Some(record.hash);
         }
@@ -4291,11 +4262,8 @@ fn file_name(path: &Path) -> String {
 /// `photo-kitbox.jpg`, then `photo-kitbox-2.jpg`, and so on. Overwriting a file
 /// the user compressed five minutes ago would be a nasty surprise.
 fn unique_path(dir: &Path, source_name: &str, ext: &str) -> std::io::Result<PathBuf> {
-    let stem = Path::new(source_name)
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or("image")
-        .to_string();
+    let stem =
+        Path::new(source_name).file_stem().and_then(|s| s.to_str()).unwrap_or("image").to_string();
     let mut candidate = dir.join(format!("{stem}-kitbox.{ext}"));
     let mut n = 2;
     while candidate.exists() {
@@ -4367,7 +4335,17 @@ mod tests {
             ..Default::default()
         };
         let v: serde_json::Value = serde_json::to_value(&res).unwrap();
-        for key in ["status", "name", "originalSize", "size", "knob", "score", "probes", "elapsedMs", "outputPath"] {
+        for key in [
+            "status",
+            "name",
+            "originalSize",
+            "size",
+            "knob",
+            "score",
+            "probes",
+            "elapsedMs",
+            "outputPath",
+        ] {
             assert!(v.get(key).is_some(), "missing {key} in {v}");
         }
         // Absent fields are omitted rather than sent as null, so the optional
@@ -4559,6 +4537,9 @@ mod tests {
     /// Checking that a process exists is not checking that the app works, so
     /// the build checks it instead.
     #[test]
+    // Constant by design: the whole point is that this cannot be true in a
+    // release build, and the assertion is what says so at build time.
+    #[allow(clippy::assertions_on_constants)]
     fn a_built_app_embeds_its_frontend_rather_than_asking_for_a_dev_server() {
         assert!(
             !cfg!(dev),
@@ -4632,9 +4613,7 @@ mod tests {
             ("colour", mt_core::engine::image::ScanMode::Colour),
             ("greyscale", mt_core::engine::image::ScanMode::Greyscale),
         ] {
-            let json = format!(
-                r#"{{ "mode": "{sent}", "detectEdges": false, "strength": 0.5 }}"#
-            );
+            let json = format!(r#"{{ "mode": "{sent}", "detectEdges": false, "strength": 0.5 }}"#);
             let options: mt_core::engine::image::ScanOptions =
                 serde_json::from_str(&json).expect("scan options");
             assert_eq!(options.mode, expected);
@@ -4662,7 +4641,8 @@ mod tests {
         assert_eq!(caption.date, "12 November 2026");
 
         // The screen sends null when the box is unticked.
-        let bare = r#"{ "spots": [{ "page": 2, "x": 0.5, "y": 0.5, "width": 0.2 }], "caption": null }"#;
+        let bare =
+            r#"{ "spots": [{ "page": 2, "x": 0.5, "y": 0.5, "width": 0.2 }], "caption": null }"#;
         let options: mt_core::engine::pdf::SignOptions =
             serde_json::from_str(bare).expect("sign options without a caption");
         assert!(options.caption.is_none());
@@ -4680,12 +4660,12 @@ mod tests {
     #[test]
     fn the_form_screen_sends_values_by_field_name() {
         let json = r#"{
-            "values": { "applicant_name": "Rupam Biswas", "agree": "yes" },
+            "values": { "applicant_name": "A. Person", "agree": "yes" },
             "flatten": true
         }"#;
         let options: mt_core::engine::pdf::FillOptions =
             serde_json::from_str(json).expect("fill options");
-        assert_eq!(options.values.get("applicant_name").map(String::as_str), Some("Rupam Biswas"));
+        assert_eq!(options.values.get("applicant_name").map(String::as_str), Some("A. Person"));
         assert!(options.flatten, "the lock-in switch has to arrive");
     }
 
@@ -4964,7 +4944,8 @@ mod tests {
             pages: vec![1],
         })
         .unwrap();
-        for key in ["name", "label", "kind", "options", "required", "readOnly", "maxLength", "pages"]
+        for key in
+            ["name", "label", "kind", "options", "required", "readOnly", "maxLength", "pages"]
         {
             assert!(field.get(key).is_some(), "the form screen reads '{key}'");
         }
@@ -5005,7 +4986,8 @@ mod tests {
             // Skip the generic parameters and whitespace to the opening quote,
             // but don't run past the call itself.
             let Some(open) = rest.find('"') else { break };
-            if rest[..open].contains(';') || rest[..open].contains('\n') && !rest[..open].contains('(')
+            if rest[..open].contains(';')
+                || rest[..open].contains('\n') && !rest[..open].contains('(')
             {
                 continue;
             }
@@ -5029,11 +5011,7 @@ mod tests {
         let Some(start) = source.find(needle) else { return Vec::new() };
         let body = &source[start + needle.len()..];
         let Some(end) = body.find(']') else { return Vec::new() };
-        body[..end]
-            .split(',')
-            .map(|s| s.trim().to_string())
-            .filter(|s| !s.is_empty())
-            .collect()
+        body[..end].split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect()
     }
 
     fn temp_store() -> (tempfile::TempDir, Store) {
@@ -5100,10 +5078,9 @@ mod tests {
     /// output lands on disk, and the gallery never hears about it.
     #[test]
     fn every_tool_that_writes_a_file_records_it() {
-        let source = std::fs::read_to_string(
-            Path::new(env!("CARGO_MANIFEST_DIR")).join("src/lib.rs"),
-        )
-        .expect("own source");
+        let source =
+            std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("src/lib.rs"))
+                .expect("own source");
 
         // Protect and unlock are deliberately excluded: keeping a copy of a
         // document someone just encrypted, or the open version of one they
@@ -5138,10 +5115,8 @@ mod tests {
         // The one exemption that is a deferral rather than a refusal: if
         // nothing records the batch, the exemption above has quietly become a
         // hole.
-        let finish = source
-            .split("async fn batch_finish(")
-            .nth(1)
-            .expect("batch_finish still exists");
+        let finish =
+            source.split("async fn batch_finish(").nth(1).expect("batch_finish still exists");
         assert!(
             finish.contains("remember_run("),
             "batch_item's outputs are recorded by batch_finish, and it no longer does"
@@ -5161,14 +5136,13 @@ mod tests {
     }
 }
 
+pub mod hotkey;
 pub mod html;
 pub mod presets;
 pub mod recipe;
-pub mod shell;
-pub mod hotkey;
-pub mod watch;
 pub mod retention;
-
+pub mod shell;
+pub mod watch;
 
 /// Render one page and quit, for the `--render` flag.
 fn render_once(target: String, out: String) {
@@ -5189,8 +5163,7 @@ fn render_once(target: String, out: String) {
             // The work waits on callbacks the event loop delivers, so it
             // cannot run on the thread about to become that loop.
             std::thread::spawn(move || {
-                let outcome: Result<(Vec<u8>, String, Vec<String>, String), String> = if as_image
-                {
+                let outcome: Result<(Vec<u8>, String, Vec<String>, String), String> = if as_image {
                     let setup = html::ShotSetup { png, ..Default::default() };
                     html::to_image(&handle, &source, &setup).map(|shot| {
                         (
@@ -5309,12 +5282,7 @@ pub fn run() {
                 eprintln!("presets: the folder could not be prepared: {e}");
             }
 
-            app.manage(AppState {
-                store: Mutex::new(store),
-                output_dir,
-                model_dir,
-                preset_dir,
-            });
+            app.manage(AppState { store: Mutex::new(store), output_dir, model_dir, preset_dir });
 
             // The retention rule, if there is one. Before anything else can
             // add to history, so a run is never racing a job.

@@ -70,20 +70,20 @@ pub fn tiny_jpeg() -> Vec<u8> {
 /// A one-page PDF holding a single JPEG, drawn into a box of the given size in
 /// points. Lets a test state the DPI it expects: a 600 px image in a 144 pt box
 /// is 300 DPI.
-pub fn pdf_with_image(px_w: u32, px_h: u32, draw_w_pt: f32, draw_h_pt: f32, quality: u8) -> Vec<u8> {
+pub fn pdf_with_image(
+    px_w: u32,
+    px_h: u32,
+    draw_w_pt: f32,
+    draw_h_pt: f32,
+    quality: u8,
+) -> Vec<u8> {
     let jpeg = encode_jpeg(&photo(px_w, px_h), quality);
     pdf_with_jpeg(&jpeg, px_w, px_h, draw_w_pt, draw_h_pt)
 }
 
 /// The same, from JPEG bytes a test made itself — for cases that need specific
 /// pixels rather than the generic photo.
-pub fn pdf_with_jpeg(
-    jpeg: &[u8],
-    px_w: u32,
-    px_h: u32,
-    draw_w_pt: f32,
-    draw_h_pt: f32,
-) -> Vec<u8> {
+pub fn pdf_with_jpeg(jpeg: &[u8], px_w: u32, px_h: u32, draw_w_pt: f32, draw_h_pt: f32) -> Vec<u8> {
     use lopdf::content::{Content, Operation};
     use lopdf::{dictionary, Document, Object, Stream};
 
@@ -155,14 +155,14 @@ pub fn pdf_text_only() -> Vec<u8> {
 
     let mut operations = Vec::new();
     operations.push(Operation::new("BT", vec![]));
-    operations.push(Operation::new(
-        "Tf",
-        vec![Object::Name(b"F1".to_vec()), Object::Real(14.0)],
-    ));
+    operations.push(Operation::new("Tf", vec![Object::Name(b"F1".to_vec()), Object::Real(14.0)]));
     for line in 0..40 {
         operations.push(Operation::new(
             "Td",
-            vec![Object::Real(if line == 0 { 72.0 } else { 0.0 }), Object::Real(if line == 0 { 720.0 } else { -16.0 })],
+            vec![
+                Object::Real(if line == 0 { 72.0 } else { 0.0 }),
+                Object::Real(if line == 0 { 720.0 } else { -16.0 }),
+            ],
         ));
         operations.push(Operation::new(
             "Tj",
@@ -265,10 +265,8 @@ pub fn pdf_with_sized_text(lines: &[(f32, &str)]) -> Vec<u8> {
     let mut operations = vec![Operation::new("BT", vec![])];
     let mut y = 720.0f32;
     for (size, text) in lines {
-        operations.push(Operation::new(
-            "Tf",
-            vec![Object::Name(b"F1".to_vec()), Object::Real(*size)],
-        ));
+        operations
+            .push(Operation::new("Tf", vec![Object::Name(b"F1".to_vec()), Object::Real(*size)]));
         operations.push(Operation::new(
             "Tm",
             vec![
@@ -315,7 +313,11 @@ fn to_winansi(text: &str) -> Vec<u8> {
         .collect()
 }
 
-fn finish(mut doc: lopdf::Document, pages_id: lopdf::ObjectId, page_ids: Vec<lopdf::ObjectId>) -> Vec<u8> {
+fn finish(
+    mut doc: lopdf::Document,
+    pages_id: lopdf::ObjectId,
+    page_ids: Vec<lopdf::ObjectId>,
+) -> Vec<u8> {
     use lopdf::{dictionary, Object};
     let count = page_ids.len() as i64;
     let kids: Vec<Object> = page_ids.into_iter().map(Object::Reference).collect();

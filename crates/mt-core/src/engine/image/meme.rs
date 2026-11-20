@@ -139,7 +139,8 @@ pub fn draw(
     }
 
     // Bottom: stacked up from the foot of the picture.
-    let mut y = (h + band_height) as f32 - line_height * 0.30
+    let mut y = (h + band_height) as f32
+        - line_height * 0.30
         - line_height * 1.18 * bottom_lines.len() as f32;
     for line in &bottom_lines {
         let stamp = stamp(line, font, line_height, thickness, options, false)?;
@@ -344,11 +345,7 @@ mod tests {
     fn picture() -> DynamicImage {
         // Mid-grey: a white caption and its black outline are both visible
         // against it, so either going missing shows up.
-        DynamicImage::ImageRgb8(image::RgbImage::from_pixel(
-            400,
-            500,
-            image::Rgb([128, 128, 128]),
-        ))
+        DynamicImage::ImageRgb8(image::RgbImage::from_pixel(400, 500, image::Rgb([128, 128, 128])))
     }
 
     #[test]
@@ -385,11 +382,8 @@ mod tests {
         let Some(font) = test_font() else { return };
         // Hard to read letters back off a bitmap, so this checks the two
         // renders differ — upper-case glyphs are a different width.
-        let quiet = MemeOptions {
-            top: "quiet please".into(),
-            uppercase: false,
-            ..Default::default()
-        };
+        let quiet =
+            MemeOptions { top: "quiet please".into(), uppercase: false, ..Default::default() };
         let loud = MemeOptions { uppercase: true, ..quiet.clone() };
         let (a, _) = draw(&picture(), &font, &quiet).unwrap();
         let (b, _) = draw(&picture(), &font, &loud).unwrap();
@@ -411,7 +405,11 @@ mod tests {
         let rgb = out.to_rgb8();
         for y in 0..rgb.height() {
             for x in [0u32, rgb.width() - 1] {
-                assert_eq!(rgb.get_pixel(x, y).0, [128, 128, 128], "text reached the edge at {x},{y}");
+                assert_eq!(
+                    rgb.get_pixel(x, y).0,
+                    [128, 128, 128],
+                    "text reached the edge at {x},{y}"
+                );
             }
         }
     }
@@ -514,7 +512,8 @@ mod tests {
     fn a_real_photograph_round_trips() {
         let Some(font) = test_font() else { return };
         let photo = testkit::encode_jpeg(&testkit::photo(300, 200), 88);
-        let options = MemeOptions { top: "TOP".into(), bottom: "BOTTOM".into(), ..Default::default() };
+        let options =
+            MemeOptions { top: "TOP".into(), bottom: "BOTTOM".into(), ..Default::default() };
         let (out, report) = meme(&photo, &font, &options).unwrap();
         assert_eq!((out.width(), out.height()), (300, 200));
         assert_eq!((report.top_lines, report.bottom_lines), (1, 1));

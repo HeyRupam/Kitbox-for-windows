@@ -58,11 +58,8 @@ pub fn encode(
                 image::ExtendedColorType::Rgba8,
             )?;
             let mut options = oxipng::Options::from_preset(3);
-            options.strip = if strip_metadata {
-                oxipng::StripChunks::Safe
-            } else {
-                oxipng::StripChunks::None
-            };
+            options.strip =
+                if strip_metadata { oxipng::StripChunks::Safe } else { oxipng::StripChunks::None };
             buf = oxipng::optimize_from_memory(&raw, &options).unwrap_or(raw);
         }
         other => return Err(Error::unsupported(format!("cannot write {}", other.label()))),
@@ -72,7 +69,10 @@ pub fn encode(
 
 pub fn has_alpha(image: &DynamicImage) -> bool {
     use image::DynamicImage::*;
-    matches!(image, ImageLumaA8(_) | ImageLumaA16(_) | ImageRgba8(_) | ImageRgba16(_) | ImageRgba32F(_))
+    matches!(
+        image,
+        ImageLumaA8(_) | ImageLumaA16(_) | ImageRgba8(_) | ImageRgba16(_) | ImageRgba32F(_)
+    )
 }
 
 pub fn flatten_on_white(image: &DynamicImage) -> image::RgbImage {

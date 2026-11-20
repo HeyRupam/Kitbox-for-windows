@@ -17,14 +17,10 @@ pub fn parse_size(input: &str) -> Result<u64> {
         return Err(Error::invalid("empty size"));
     }
 
-    let split = s
-        .find(|c: char| !(c.is_ascii_digit() || c == '.'))
-        .unwrap_or(s.len());
+    let split = s.find(|c: char| !(c.is_ascii_digit() || c == '.')).unwrap_or(s.len());
     let (num, unit) = s.split_at(split);
 
-    let value: f64 = num
-        .parse()
-        .map_err(|_| Error::invalid(format!("'{input}' is not a size")))?;
+    let value: f64 = num.parse().map_err(|_| Error::invalid(format!("'{input}' is not a size")))?;
     if value < 0.0 || !value.is_finite() {
         return Err(Error::invalid(format!("'{input}' is not a size")));
     }
@@ -59,8 +55,7 @@ pub fn parse_target(input: &str) -> Result<SizeTarget> {
         .replace('<', " ")
         .replace(" and ", "-")
         .replace(" to ", "-")
-        .replace('–', "-")
-        .replace('—', "-");
+        .replace(['–', '—'], "-");
     let exact = raw.contains("exactly") || raw.contains("about") || raw.contains("~");
     let cleaned = cleaned.replace("exactly", " ").replace("about", " ").replace('~', " ");
     let cleaned = cleaned.trim().to_string();
@@ -99,7 +94,8 @@ fn split_range(s: &str) -> Option<(String, String)> {
         if c == '-' && i > 0 && i + 1 < s.len() {
             let before = &s[..i];
             let after = &s[i + 1..];
-            if before.chars().any(|c| c.is_ascii_digit()) && after.chars().any(|c| c.is_ascii_digit())
+            if before.chars().any(|c| c.is_ascii_digit())
+                && after.chars().any(|c| c.is_ascii_digit())
             {
                 return Some((before.to_string(), after.to_string()));
             }
