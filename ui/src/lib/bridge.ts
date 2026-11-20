@@ -655,6 +655,26 @@ export async function setWatchedFolders(watches: Watch[]): Promise<Watch[]> {
   return invoke<Watch[]>("set_watched_folders", { watches });
 }
 
+/**
+ * Ask for a file on disk, by path.
+ *
+ * The browser's file input hands over bytes and a name, never a location —
+ * which is no use to the renderer, because it has to load the page itself to
+ * follow the stylesheets and pictures sitting beside it.
+ */
+export async function pickFile(
+  what: string,
+  extensions: string[],
+): Promise<string | null> {
+  if (!isDesktop()) requireDesktop("Choosing a file");
+  const { open } = await import("@tauri-apps/plugin-dialog");
+  const chosen = await open({
+    multiple: false,
+    filters: [{ name: what, extensions }],
+  });
+  return typeof chosen === "string" ? chosen : null;
+}
+
 /** Ask for a folder. Returns null if the dialog was dismissed. */
 export async function pickFolder(): Promise<string | null> {
   if (!isDesktop()) requireDesktop("Choosing a folder");

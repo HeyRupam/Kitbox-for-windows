@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 import { Icon, ICONS } from "../components/Icon";
 import {
@@ -6,6 +6,7 @@ import {
   htmlToImage,
   htmlToPdf,
   isDesktop,
+  pickFile,
   revealOutput,
 } from "../lib/bridge";
 import type {
@@ -52,7 +53,6 @@ export function Html({
   const [png, setPng] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const source = (): HtmlSource | null => {
     if (mode === "url")
@@ -232,30 +232,22 @@ export function Html({
 
               {mode === "file" && (
                 <div className="col" style={{ gap: 9, maxWidth: 620 }}>
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    accept=".html,.htm"
-                    hidden
-                    onChange={(e) => {
-                      const picked = e.target.files?.[0] as
-                        (File & { path?: string }) | undefined;
-                      // Tauri gives a real path on a dropped or chosen file;
-                      // without one there is nothing the renderer can open.
-                      if (picked?.path) {
-                        setFile(picked.path);
-                        setResult(null);
-                      } else if (picked) {
-                        setError(
-                          "The browser didn't hand over a path for that file. Drag it onto the window instead, or paste its HTML.",
-                        );
-                      }
-                    }}
-                  />
                   <button
                     type="button"
                     className={file ? "pressed" : "raised-sm btn"}
-                    onClick={() => fileRef.current?.click()}
+                    // The system's own dialog, because this needs a location
+                    // rather than bytes: the renderer opens the page itself so
+                    // the stylesheets and pictures beside it come too.
+                    onClick={async () => {
+                      const chosen = await pickFile("Web page", ["html", "htm"]).catch(
+                        () => null,
+                      );
+                      if (chosen) {
+                        setFile(chosen);
+                        setResult(null);
+                        setError(null);
+                      }
+                    }}
                     style={{
                       ...field,
                       textAlign: "left",
