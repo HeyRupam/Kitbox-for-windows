@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "npm --prefix ui run dev",
     "ui:build": "npm --prefix ui run build",
-    "app": "cd apps/desktop && tauri dev --no-default-features",
+    "app": "cd apps/desktop && tauri dev -- --no-default-features",
     "app:build": "cd apps/desktop && tauri build",
     "test": "cargo test && npm --prefix ui run typecheck"
   },

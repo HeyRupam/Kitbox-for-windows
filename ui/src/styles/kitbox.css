@@ -228,6 +228,18 @@ input::placeholder {
   align-items: center;
   gap: 10px;
   padding: 0 14px;
+  /*
+   * A flex item will not shrink below the intrinsic width of what it holds,
+   * and a number input insists on room for about twenty characters. The
+   * input below says `min-width: 0` and can shrink; this span could not, so
+   * the two size fields on the compress screen came to 534px inside a 266px
+   * panel and the maximum was drawn past the panel's edge — which clips,
+   * because a panel that scrolls vertically has `overflow-x: hidden`. Forty
+   * pixels of a 225px field were visible and none of them could be scrolled
+   * to. Nothing here wants that floor: the fields are told what width to
+   * take by their `flex`, not by their contents.
+   */
+  min-width: 0;
 }
 .field input {
   flex: 1;
@@ -320,6 +332,16 @@ input[type="range"]::-webkit-slider-thumb {
   border-radius: var(--r-pill);
   border: 3px solid var(--surface);
 }
+/*
+ * The rail is a column that scrolls, so none of its parts may shrink: a flex
+ * item gives way before its container's scroller ever engages, which is how
+ * the category list ended up 62px tall at the minimum window instead of the
+ * rail simply scrolling.
+ */
+.rail > * {
+  flex-shrink: 0;
+}
+
 .noscroll {
   scrollbar-width: none;
 }
