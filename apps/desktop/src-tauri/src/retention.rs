@@ -303,6 +303,11 @@ mod tests {
             store.get(&small.hash).unwrap().is_some(),
             "the compressed copy is what the person wanted"
         );
+        assert_eq!(
+            store.recent_outputs(10).unwrap().len(),
+            1,
+            "and it is still the thing the gallery shows"
+        );
     }
 
     #[test]

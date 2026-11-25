@@ -240,17 +240,26 @@ impl Store {
         Ok(rows.collect::<std::result::Result<_, _>>()?)
     }
 
-    /// Files no job mentions, as an input or an output.
+    /// Files nothing points at any more.
     ///
     /// Kitbox keeps a copy of what goes in as well as what comes out, so that
     /// a chain stays whole. When the jobs that referred to one are forgotten,
     /// its copy is left holding disk space nothing can reach: not in the
     /// gallery, not in any lineage, not findable. That is what this finds.
+    ///
+    /// A job is not the only thing that can point at a row. Every thumbnail
+    /// is stored as a file in its own right, and no job ever mentions one -
+    /// so asking about jobs alone called every thumbnail in the store junk,
+    /// and the storage panel offered to clear away the very pictures the
+    /// gallery was drawing with. Nothing was actually lost, because the blob
+    /// is kept while any row still points at it, but the offer was a lie:
+    /// it counted the bytes as freed and freed none of them.
     pub fn unreachable(&self) -> Result<Vec<FileRecord>> {
         let mut stmt = self.db.prepare(
             "SELECT * FROM files f
              WHERE NOT EXISTS (SELECT 1 FROM jobs j
                                WHERE j.input_hash = f.hash OR j.output_hash = f.hash)
+               AND NOT EXISTS (SELECT 1 FROM files p WHERE p.thumb_hash = f.hash)
              ORDER BY created_at DESC",
         )?;
         let rows = stmt.query_map([], row_to_file)?;
@@ -332,8 +341,18 @@ impl Store {
     pub fn forget(&self, hash: &str) -> Result<()> {
         let record = self.get(hash)?;
 
-        self.db
-            .execute("DELETE FROM jobs WHERE input_hash = ?1 OR output_hash = ?1", params![hash])?;
+        // Only the jobs this file was the *result* of. A job whose input
+        // has been forgotten is still a true record of something that
+        // happened, and the gallery is built on jobs: deleting one because
+        // its input went took the finished file off the screen with it, even
+        // though the file itself was kept. That is what the default retention
+        // rule did - sweep the originals after ninety days, and every result
+        // quietly vanished from history while sitting on disk.
+        //
+        // `entry_story` has always drawn this case as "a file no longer
+        // kept", so a dangling input was expected here long before it could
+        // actually happen.
+        self.db.execute("DELETE FROM jobs WHERE output_hash = ?1", params![hash])?;
         self.db.execute("DELETE FROM files WHERE hash = ?1", params![hash])?;
         self.db.execute("DELETE FROM tags WHERE hash = ?1", params![hash])?;
 
@@ -459,6 +478,39 @@ mod tests {
         assert!(!blob.exists(), "the bytes are gone from disk");
     }
 
+    /// Forgetting the original must not take the result off the screen.
+    ///
+    /// The gallery lists files that are the output of some job, so a job is
+    /// what makes a result visible. Deleting jobs by their input meant that
+    /// clearing away an original - which is exactly what the retention rule
+    /// is for - hid the finished file as well.
+    #[test]
+    fn forgetting_the_original_leaves_the_result_in_the_gallery() {
+        let (_d, s) = store();
+        let original = s.put(b"the original scan", meta("scan.jpg")).unwrap();
+        let result = s.put(b"the compressed copy", meta("scan-kitbox.jpg")).unwrap();
+        s.record_job(NewJob {
+            tool: "compress".into(),
+            recipe: "{}".into(),
+            input_hash: original.hash.clone(),
+            output_hash: result.hash.clone(),
+            summary: "squeezed".into(),
+            duration_ms: 1,
+        })
+        .unwrap();
+
+        s.forget(&original.hash).unwrap();
+
+        assert!(s.get(&original.hash).unwrap().is_none(), "the original is gone, as asked");
+        assert_eq!(
+            s.recent_outputs(10).unwrap().len(),
+            1,
+            "the result it produced is still what the gallery shows"
+        );
+        let chain = s.lineage(&result.hash).unwrap();
+        assert_eq!(chain.len(), 1, "and the step that made it is still recorded");
+    }
+
     #[test]
     fn forgetting_takes_the_thumbnail_with_it() {
         // A thumbnail left behind is a picture of the thing someone asked to
@@ -539,6 +591,51 @@ mod tests {
         let loose = s.unreachable().unwrap();
         assert_eq!(loose.len(), 1, "the input is now reachable from nothing");
         assert_eq!(loose[0].hash, input.hash);
+    }
+
+    /// The case the test above does not reach.
+    ///
+    /// A thumbnail is a file row like any other and no job ever names one, so
+    /// a sweep that asks only about jobs finds every thumbnail in the store
+    /// and calls it loose: the storage panel opens offering to tidy away one
+    /// thing per entry, none of which are junk. Found by running the history
+    /// screen on Android, where the same store and the same sweep live.
+    #[test]
+    fn a_thumbnail_is_not_loose_while_its_picture_is_in_the_gallery() {
+        let (_d, s) = store();
+
+        let thumb = s.put(b"a small jpeg", meta("photo.jpg.thumb")).unwrap();
+        let photo = s
+            .put(
+                b"the photograph",
+                FileMeta { thumb_hash: Some(thumb.hash.clone()), ..meta("photo.jpg") },
+            )
+            .unwrap();
+        s.record_job(NewJob {
+            tool: "compress".into(),
+            recipe: "{}".into(),
+            input_hash: String::new(),
+            output_hash: photo.hash.clone(),
+            summary: "done".into(),
+            duration_ms: 1,
+        })
+        .unwrap();
+
+        assert!(
+            s.unreachable().unwrap().is_empty(),
+            "the thumbnail is what the gallery draws; nothing about it is loose"
+        );
+
+        // And once the picture itself is gone, the thumbnail goes with it
+        // rather than being left behind - which is the other half of the
+        // promise, and is `forget`'s job rather than this one's.
+        s.forget(&photo.hash).unwrap();
+        assert!(s.get(&thumb.hash).unwrap().is_some(), "the row is still there to be swept");
+        assert_eq!(
+            s.unreachable().unwrap().len(),
+            1,
+            "with nothing pointing at it, the thumbnail is loose now"
+        );
     }
 
     #[test]
