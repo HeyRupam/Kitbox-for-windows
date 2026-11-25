@@ -389,13 +389,23 @@ function Rail({
 
   return (
     <nav
-      className="raised col"
+      className="raised col scroll rail"
       aria-label="Tools"
       style={{
         flex: "0 0 244px",
         borderRadius: "var(--r-panel)",
         padding: "22px 16px",
         gap: 20,
+        /*
+         * The rail scrolls as a whole when the window is too short for it.
+         * It used to keep its own height and let the category list — the one
+         * child with `flex: 1` — absorb every missing pixel, so at the
+         * default window the list was 246px of the 294 it wanted and
+         * "Security" was already hidden; at the 660px minimum it was 62px,
+         * about one and a fifth entries of seven. The navigation was giving
+         * way while the offline blurb underneath kept all 126 of its pixels.
+         */
+        minHeight: 0,
       }}
     >
       <div className="row" style={{ gap: 12, padding: "0 6px" }}>
@@ -440,7 +450,9 @@ function Rail({
         ))}
       </div>
 
-      <div className="col grow scroll" style={{ gap: 6 }}>
+      {/* Every category at its full height, always. The rail is the scroller
+          now, so this list has nothing to give and nothing to hide. */}
+      <div className="col" style={{ gap: 6 }}>
         {entries.map((e) => {
           const active = screen.name === "home" && category === e.id;
           return (
@@ -478,7 +490,9 @@ function Rail({
         })}
       </div>
 
-      <div className="divider" />
+      {/* What the list used to do with its `flex: 1`: hold the rest of the
+          rail against the bottom when the window is tall enough to spare it. */}
+      <div className="divider" style={{ marginTop: "auto" }} />
 
       <div className="col" style={{ gap: 2 }}>
         <RailLink

@@ -183,7 +183,17 @@ export function Cutout({
                       {url}
                     </span>
                   ))}
-                  <span style={{ fontSize: 11.5, color: "var(--text-subtle)", lineHeight: 1.5 }}>
+                  {/* The URL above breaks anywhere; this line is prose with a
+                      Windows path in the middle of it, which has no spaces to
+                      break at and ran past the box on a narrow window. */}
+                  <span
+                    style={{
+                      fontSize: 11.5,
+                      color: "var(--text-subtle)",
+                      lineHeight: 1.5,
+                      overflowWrap: "anywhere",
+                    }}
+                  >
                     U²-Net, Apache 2.0 licensed. It goes in {models.folder}.
                   </span>
                 </div>

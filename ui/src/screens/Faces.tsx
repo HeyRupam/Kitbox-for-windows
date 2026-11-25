@@ -180,7 +180,15 @@ export function Faces({
                       {url}
                     </span>
                   ))}
-                  <span style={{ fontSize: 11.5, color: "var(--text-subtle)" }}>
+                  {/* A path with no spaces in the middle of a sentence: it
+                      needs somewhere to break or it leaves the box. */}
+                  <span
+                    style={{
+                      fontSize: 11.5,
+                      color: "var(--text-subtle)",
+                      overflowWrap: "anywhere",
+                    }}
+                  >
                     UltraFace, MIT licensed. It goes in {models.folder}.
                   </span>
                 </div>

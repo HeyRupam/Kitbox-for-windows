@@ -23,6 +23,28 @@ const YOURS: &str = "yours.json";
 /// copy from. Never loaded back.
 const REFERENCE: &str = "bundled-reference.json";
 
+/// The app's own settings, which happen to live in this same folder.
+///
+/// None of these is a preset, and two of them are JSON objects rather than
+/// lists, so the scan below read them, failed to parse them, and put two
+/// permanent "couldn't be read" banners at the top of the Form presets
+/// screen telling the person to go and fix files they should never touch.
+/// `recipes.json` and `watched-folders.json` escaped only by being `[]`,
+/// which parses as a preset list of none.
+///
+/// Saying so out loud when a file here cannot be read is deliberate — a
+/// typo in a hand-edited preset is the fault most likely to look like "my
+/// preset vanished". That only works if the app's own files are not in the
+/// pile. `every_file_the_app_writes_here_is_named_above` keeps this list
+/// true as the settings grow.
+const OURS: [&str; 5] = [
+    REFERENCE,
+    "hotkey.json",
+    "recipes.json",
+    "retention.json",
+    "watched-folders.json",
+];
+
 const README: &str = "\
 Form presets
 ============
@@ -109,7 +131,9 @@ pub fn load(dir: &Path) -> Loaded {
             .map(|e| e.path())
             .filter(|p| {
                 p.extension().is_some_and(|e| e.eq_ignore_ascii_case("json"))
-                    && p.file_name().is_some_and(|n| n != REFERENCE)
+                    && p.file_name().is_some_and(|n| {
+                        !OURS.iter().any(|ours| n.eq_ignore_ascii_case(ours))
+                    })
             })
             .collect();
         // `yours.json` first, then anything else alphabetically, so a run is
@@ -398,5 +422,71 @@ mod tests {
         assert_eq!(loaded.presets.len(), Preset::bundled().len());
         assert!(loaded.problems.is_empty());
         assert!(dir.join("README.txt").exists(), "the folder explains itself");
+    }
+
+    #[test]
+    fn the_apps_own_settings_are_not_read_as_presets() {
+        // Each of these is what the matching module actually writes. Two are
+        // objects, so before `OURS` existed they produced a "couldn't be
+        // read" banner on the Form presets screen on every machine.
+        let dir = temp();
+        prepare(&dir).unwrap();
+        std::fs::write(dir.join("hotkey.json"), r#"{"enabled":true,"key":"K"}"#).unwrap();
+        std::fs::write(dir.join("retention.json"), r#"{"keepDays":30}"#).unwrap();
+        std::fs::write(dir.join("recipes.json"), "[]").unwrap();
+        std::fs::write(dir.join("watched-folders.json"), "[]").unwrap();
+        std::fs::write(dir.join(YOURS), one("mine", "Mine")).unwrap();
+
+        let loaded = load(&dir);
+        assert!(
+            loaded.problems.is_empty(),
+            "the app's own settings are not the person's presets: {:?}",
+            loaded.problems
+        );
+        assert!(loaded.presets.iter().any(|e| e.preset.id == "mine"));
+    }
+
+    #[test]
+    fn a_broken_preset_is_still_reported() {
+        // The point of the filter is to stop crying wolf, not to stop crying.
+        let dir = temp();
+        prepare(&dir).unwrap();
+        std::fs::write(dir.join("hotkey.json"), r#"{"enabled":true}"#).unwrap();
+        std::fs::write(dir.join(YOURS), "{ not a list }").unwrap();
+
+        let loaded = load(&dir);
+        assert_eq!(loaded.problems.len(), 1, "{:?}", loaded.problems);
+        assert_eq!(loaded.problems[0].file, YOURS);
+    }
+
+    /// `OURS` is a hand-written list, and the way it goes stale is that a new
+    /// setting gets its own file in this folder and nobody thinks of the
+    /// preset screen. So read the sibling modules and check.
+    #[test]
+    fn every_file_the_app_writes_here_is_named_above() {
+        let src = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let mut found = Vec::new();
+        for module in ["hotkey.rs", "retention.rs", "watch.rs", "lib.rs"] {
+            let text = std::fs::read_to_string(src.join(module)).expect("own source");
+            // `dir.join("something.json")` — how each module names its file in
+            // the preset folder.
+            for piece in text.split("dir.join(\"").skip(1) {
+                let Some(name) = piece.split('"').next() else { continue };
+                if name.ends_with(".json") {
+                    found.push((module, name.to_string()));
+                }
+            }
+        }
+        assert!(
+            !found.is_empty(),
+            "found no `dir.join(\"….json\")` at all — the parser is wrong, not the code"
+        );
+        for (module, name) in found {
+            assert!(
+                OURS.contains(&name.as_str()),
+                "{module} writes {name} into the preset folder but OURS does not list it, \
+                 so the Form presets screen will report it as a broken preset"
+            );
+        }
     }
 }
