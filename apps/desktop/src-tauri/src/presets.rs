@@ -37,13 +37,8 @@ const REFERENCE: &str = "bundled-reference.json";
 /// preset vanished". That only works if the app's own files are not in the
 /// pile. `every_file_the_app_writes_here_is_named_above` keeps this list
 /// true as the settings grow.
-const OURS: [&str; 5] = [
-    REFERENCE,
-    "hotkey.json",
-    "recipes.json",
-    "retention.json",
-    "watched-folders.json",
-];
+const OURS: [&str; 5] =
+    [REFERENCE, "hotkey.json", "recipes.json", "retention.json", "watched-folders.json"];
 
 const README: &str = "\
 Form presets
@@ -131,9 +126,8 @@ pub fn load(dir: &Path) -> Loaded {
             .map(|e| e.path())
             .filter(|p| {
                 p.extension().is_some_and(|e| e.eq_ignore_ascii_case("json"))
-                    && p.file_name().is_some_and(|n| {
-                        !OURS.iter().any(|ours| n.eq_ignore_ascii_case(ours))
-                    })
+                    && p.file_name()
+                        .is_some_and(|n| !OURS.iter().any(|ours| n.eq_ignore_ascii_case(ours)))
             })
             .collect();
         // `yours.json` first, then anything else alphabetically, so a run is
